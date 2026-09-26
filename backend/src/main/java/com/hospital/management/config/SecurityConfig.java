@@ -1,169 +1,90 @@
-package com.hospital.management.security;
+package com.hospital.management.config;
 
-import org.springframework.beans.factory.annotation.Value;
+import java.util.List;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
-
 @Configuration
-@EnableMethodSecurity
 public class SecurityConfig {
-
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
-    @Value("${FRONTEND_URL:http://localhost:5173}")
-    private String frontendUrl;
-
-    public SecurityConfig(
-            JwtAuthenticationFilter jwtAuthenticationFilter) {
-
-        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
-    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http) throws Exception {
 
         http
+            // Enable CORS
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // Disable CSRF for REST API
-                .csrf(csrf -> csrf.disable())
+            // Disable CSRF for REST API
+            .csrf(csrf -> csrf.disable())
 
-                // Enable CORS
-                .cors(cors ->
-                        cors.configurationSource(
-                                corsConfigurationSource()
-                        )
+            // JWT based application
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(
+                    SessionCreationPolicy.STATELESS
                 )
+            )
 
-                // JWT based authentication
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(
-                                SessionCreationPolicy.STATELESS
-                        )
-                )
+            // Authorization
+            .authorizeHttpRequests(auth -> auth
 
-                // Authorization rules
-                .authorizeHttpRequests(auth -> auth
+                // IMPORTANT: Allow CORS preflight
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Root endpoint
-                        .requestMatchers("/")
-                        .permitAll()
+                // Public endpoints
+                .requestMatchers(
+                    "/",
+                    "/auth/**"
+                ).permitAll()
 
-                        // Authentication endpoints
-                        .requestMatchers(
-                                "/auth/register",
-                                "/auth/login"
-                        )
-                        .permitAll()
-
-                        // Authenticated user information
-                        .requestMatchers(
-                                "/auth/me"
-                        )
-                        .authenticated()
-
-                        // Patient APIs
-                        .requestMatchers(
-                                "/patients/**"
-                        )
-                        .hasAnyRole(
-                                "PATIENT",
-                                "ADMIN"
-                        )
-
-                        // Doctor APIs
-                        .requestMatchers(
-                                "/doctors/**"
-                        )
-                        .hasAnyRole(
-                                "PATIENT",
-                                "DOCTOR",
-                                "ADMIN"
-                        )
-
-                        // Appointment APIs
-                        .requestMatchers(
-                                "/appointments/**"
-                        )
-                        .hasAnyRole(
-                                "PATIENT",
-                                "DOCTOR",
-                                "ADMIN"
-                        )
-
-                        // Availability APIs
-                        .requestMatchers(
-                                "/availability/**"
-                        )
-                        .hasAnyRole(
-                                "PATIENT",
-                                "DOCTOR",
-                                "ADMIN"
-                        )
-
-                        // Everything else requires authentication
-                        .anyRequest()
-                        .authenticated()
-                )
-
-                // JWT filter
-                .addFilterBefore(
-                        jwtAuthenticationFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                );
+                // Everything else requires authentication
+                .anyRequest().authenticated()
+            );
 
         return http.build();
     }
+
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
         CorsConfiguration configuration =
-                new CorsConfiguration();
+            new CorsConfiguration();
 
-        configuration.setAllowedOrigins(
-                Arrays.asList(frontendUrl)
-        );
+        configuration.setAllowedOrigins(List.of(
+            "https://YOUR-FRONTEND-URL.onrender.com"
+        ));
 
-        configuration.setAllowedMethods(
-                Arrays.asList(
-                        "GET",
-                        "POST",
-                        "PUT",
-                        "DELETE",
-                        "PATCH",
-                        "OPTIONS"
-                )
-        );
+        configuration.setAllowedMethods(List.of(
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "OPTIONS"
+        ));
 
-        configuration.setAllowedHeaders(
-                Arrays.asList(
-                        "Authorization",
-                        "Content-Type",
-                        "Accept"
-                )
-        );
+        configuration.setAllowedHeaders(List.of(
+            "Authorization",
+            "Content-Type",
+            "Accept"
+        ));
 
-        configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(false);
 
-        UrlBasedCorsConfigurationSource source =
-                new UrlBasedCorsConfigurationSource();
+        CorsConfigurationSource source =
+            new UrlBasedCorsConfigurationSource();
 
         source.registerCorsConfiguration(
-                "/**",
-                configuration
+            "/**",
+            configuration
         );
 
         return source;
