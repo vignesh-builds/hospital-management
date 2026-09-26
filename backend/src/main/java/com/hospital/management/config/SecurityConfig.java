@@ -7,7 +7,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -37,7 +36,8 @@ public class SecurityConfig {
             HttpSecurity http) throws Exception {
 
         http
-                // Disable CSRF because this is a REST API
+
+                // Disable CSRF for REST API
                 .csrf(csrf -> csrf.disable())
 
                 // Enable CORS
@@ -54,6 +54,7 @@ public class SecurityConfig {
                         )
                 )
 
+                // Authorization rules
                 .authorizeHttpRequests(auth -> auth
 
                         // Root endpoint
@@ -67,7 +68,7 @@ public class SecurityConfig {
                         )
                         .permitAll()
 
-                        // Current logged-in user
+                        // Authenticated user information
                         .requestMatchers(
                                 "/auth/me"
                         )
@@ -142,6 +143,7 @@ public class SecurityConfig {
                         "POST",
                         "PUT",
                         "DELETE",
+                        "PATCH",
                         "OPTIONS"
                 )
         );
@@ -149,7 +151,8 @@ public class SecurityConfig {
         configuration.setAllowedHeaders(
                 Arrays.asList(
                         "Authorization",
-                        "Content-Type"
+                        "Content-Type",
+                        "Accept"
                 )
         );
 
