@@ -17,6 +17,9 @@ function Register() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // ==============================
+  // HANDLE INPUT CHANGE
+  // ==============================
   const handleChange = (event) => {
     setFormData({
       ...formData,
@@ -24,6 +27,9 @@ function Register() {
     });
   };
 
+  // ==============================
+  // REGISTER
+  // ==============================
   const handleSubmit = async (event) => {
     event.preventDefault();
 
@@ -39,9 +45,14 @@ function Register() {
 
           headers: {
             "Content-Type": "application/json",
+            Accept: "application/json",
           },
 
-          body: JSON.stringify(formData),
+          body: JSON.stringify({
+            name: formData.name.trim(),
+            email: formData.email.trim(),
+            password: formData.password,
+          }),
         }
       );
 
@@ -83,7 +94,6 @@ function Register() {
       setError(
         error.message || "Failed to connect to server"
       );
-
     } finally {
       setLoading(false);
     }
