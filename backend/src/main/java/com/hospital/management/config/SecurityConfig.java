@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -36,14 +37,17 @@ public class SecurityConfig {
             HttpSecurity http) throws Exception {
 
         http
+                // Disable CSRF because this is a REST API
                 .csrf(csrf -> csrf.disable())
 
+                // Enable CORS
                 .cors(cors ->
                         cors.configurationSource(
                                 corsConfigurationSource()
                         )
                 )
 
+                // JWT based authentication
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
                                 SessionCreationPolicy.STATELESS
@@ -52,17 +56,24 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
+                        // Root endpoint
+                        .requestMatchers("/")
+                        .permitAll()
+
+                        // Authentication endpoints
                         .requestMatchers(
                                 "/auth/register",
                                 "/auth/login"
                         )
                         .permitAll()
 
+                        // Current logged-in user
                         .requestMatchers(
                                 "/auth/me"
                         )
                         .authenticated()
 
+                        // Patient APIs
                         .requestMatchers(
                                 "/patients/**"
                         )
@@ -71,6 +82,7 @@ public class SecurityConfig {
                                 "ADMIN"
                         )
 
+                        // Doctor APIs
                         .requestMatchers(
                                 "/doctors/**"
                         )
@@ -80,6 +92,7 @@ public class SecurityConfig {
                                 "ADMIN"
                         )
 
+                        // Appointment APIs
                         .requestMatchers(
                                 "/appointments/**"
                         )
@@ -89,6 +102,7 @@ public class SecurityConfig {
                                 "ADMIN"
                         )
 
+                        // Availability APIs
                         .requestMatchers(
                                 "/availability/**"
                         )
@@ -98,10 +112,12 @@ public class SecurityConfig {
                                 "ADMIN"
                         )
 
+                        // Everything else requires authentication
                         .anyRequest()
-                        .permitAll()
+                        .authenticated()
                 )
 
+                // JWT filter
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
