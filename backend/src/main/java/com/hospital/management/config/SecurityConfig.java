@@ -4,88 +4,159 @@ import java.util.List;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
+
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+
 import org.springframework.security.config.http.SessionCreationPolicy;
+
 import org.springframework.security.web.SecurityFilterChain;
+
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(
-            HttpSecurity http) throws Exception {
+            HttpSecurity http
+    ) throws Exception {
 
         http
-            // Enable CORS
+
+            // ==============================
+            // CORS
+            // ==============================
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-            // Disable CSRF for REST API
+            // ==============================
+            // CSRF
+            // ==============================
             .csrf(csrf -> csrf.disable())
 
-            // JWT based application
+            // ==============================
+            // SESSION
+            // ==============================
             .sessionManagement(session ->
-                session.sessionCreationPolicy(
-                    SessionCreationPolicy.STATELESS
-                )
+                    session.sessionCreationPolicy(
+                            SessionCreationPolicy.STATELESS
+                    )
             )
 
-            // Authorization
+            // ==============================
+            // AUTHORIZATION
+            // ==============================
             .authorizeHttpRequests(auth -> auth
 
-                // IMPORTANT: Allow CORS preflight
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    // Authentication APIs
+                    .requestMatchers(
+                            "/auth/**"
+                    ).permitAll()
 
-                // Public endpoints
-                .requestMatchers(
-                    "/",
-                    "/auth/**"
-                ).permitAll()
+                    // OPTIONS preflight request
+                    .requestMatchers(
+                            org.springframework.http.HttpMethod.OPTIONS,
+                            "/**"
+                    ).permitAll()
 
-                // Everything else requires authentication
-                .anyRequest().authenticated()
+                    // Public health/test API
+                    .requestMatchers(
+                            "/",
+                            "/health",
+                            "/api/**"
+                    ).permitAll()
+
+                    // Everything else requires login
+                    .anyRequest().authenticated()
             );
 
         return http.build();
     }
 
 
+    // ==========================================================
+    // CORS CONFIGURATION
+    // ==========================================================
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
         CorsConfiguration configuration =
-            new CorsConfiguration();
+                new CorsConfiguration();
+
+        // ------------------------------------------------------
+        // FRONTEND URLS
+        // ------------------------------------------------------
 
         configuration.setAllowedOrigins(List.of(
-            "https://YOUR-FRONTEND-URL.onrender.com"
+                "http://localhost:5173",
+                "http://localhost:3000",
+
+                // IMPORTANT:
+                // Replace this with your actual Render frontend URL
+                "https://hospital-frontend-7jfj.onrender.com"
         ));
+
+
+        // ------------------------------------------------------
+        // ALLOWED METHODS
+        // ------------------------------------------------------
 
         configuration.setAllowedMethods(List.of(
-            "GET",
-            "POST",
-            "PUT",
-            "DELETE",
-            "OPTIONS"
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "PATCH",
+                "OPTIONS"
         ));
+
+
+        // ------------------------------------------------------
+        // ALLOWED HEADERS
+        // ------------------------------------------------------
 
         configuration.setAllowedHeaders(List.of(
-            "Authorization",
-            "Content-Type",
-            "Accept"
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "Origin",
+                "X-Requested-With"
         ));
 
-        configuration.setAllowCredentials(false);
 
-        CorsConfigurationSource source =
-            new UrlBasedCorsConfigurationSource();
+        // ------------------------------------------------------
+        // CREDENTIALS
+        // ------------------------------------------------------
+
+        configuration.setAllowCredentials(true);
+
+
+        // ------------------------------------------------------
+        // EXPOSE HEADERS
+        // ------------------------------------------------------
+
+        configuration.setExposedHeaders(List.of(
+                "Authorization"
+        ));
+
+
+        // ------------------------------------------------------
+        // REGISTER CORS CONFIGURATION
+        // ------------------------------------------------------
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
 
         source.registerCorsConfiguration(
-            "/**",
-            configuration
+                "/**",
+                configuration
         );
+
 
         return source;
     }
