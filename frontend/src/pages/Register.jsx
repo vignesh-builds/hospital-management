@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import "./Register.css";
 
-function Register() {
+const API_URL = "https://hospital-backend-jcnb.onrender.com";
 
+function Register() {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -16,7 +17,6 @@ function Register() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
-
   const handleChange = (event) => {
     setFormData({
       ...formData,
@@ -24,20 +24,16 @@ function Register() {
     });
   };
 
-
   const handleSubmit = async (event) => {
-
     event.preventDefault();
 
     setError("");
     setSuccess("");
     setLoading(true);
 
-
     try {
-
       const response = await fetch(
-        "http://localhost:8080/auth/register",
+        `${API_URL}/auth/register`,
         {
           method: "POST",
 
@@ -49,7 +45,6 @@ function Register() {
         }
       );
 
-
       const text = await response.text();
 
       let data;
@@ -60,7 +55,6 @@ function Register() {
         data = text;
       }
 
-
       if (!response.ok) {
         throw new Error(
           typeof data === "string"
@@ -69,11 +63,9 @@ function Register() {
         );
       }
 
-
       setSuccess(
         "Registration successful. Redirecting to login..."
       );
-
 
       setFormData({
         name: "",
@@ -81,26 +73,23 @@ function Register() {
         password: "",
       });
 
-
       setTimeout(() => {
         navigate("/login");
       }, 1500);
 
-
     } catch (error) {
+      console.error("Registration error:", error);
 
-      setError(error.message);
+      setError(
+        error.message || "Failed to connect to server"
+      );
 
     } finally {
-
       setLoading(false);
-
     }
   };
 
-
   return (
-
     <div className="auth-container">
 
       <div className="auth-card">
@@ -109,20 +98,17 @@ function Register() {
 
         <h3>Create Patient Account</h3>
 
-
         {error && (
           <div className="error-message">
             {error}
           </div>
         )}
 
-
         {success && (
           <div className="success-message">
             {success}
           </div>
         )}
-
 
         <form onSubmit={handleSubmit}>
 
@@ -135,7 +121,6 @@ function Register() {
             required
           />
 
-
           <input
             type="email"
             name="email"
@@ -145,17 +130,15 @@ function Register() {
             required
           />
 
-
           <input
             type="password"
             name="password"
             placeholder="Password"
             value={formData.password}
             onChange={handleChange}
-            minLength="6"
+            minLength={6}
             required
           />
-
 
           <button
             type="submit"
@@ -167,7 +150,6 @@ function Register() {
           </button>
 
         </form>
-
 
         <p>
           Already have an account?{" "}
