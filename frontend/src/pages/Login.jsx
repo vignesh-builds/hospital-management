@@ -16,6 +16,9 @@ function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // ==============================
+  // HANDLE INPUT CHANGE
+  // ==============================
   const handleChange = (event) => {
     setFormData({
       ...formData,
@@ -23,6 +26,9 @@ function Login() {
     });
   };
 
+  // ==============================
+  // LOGIN
+  // ==============================
   const handleSubmit = async (event) => {
     event.preventDefault();
 
@@ -30,30 +36,60 @@ function Login() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      const response = await fetch(
+        `${API_URL}/auth/login`,
+        {
+          method: "POST",
 
-      const data = await response.json();
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+
+          body: JSON.stringify({
+            email: formData.email.trim(),
+            password: formData.password,
+          }),
+        }
+      );
+
+      const text = await response.text();
+
+      let data;
+
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = text;
+      }
 
       if (!response.ok) {
         throw new Error(
-          data.message || "Invalid email or password"
+          typeof data === "string"
+            ? data
+            : data?.message ||
+              "Invalid email or password"
         );
       }
 
+      // ==============================
+      // SAVE LOGIN DATA
+      // ==============================
       saveAuth(data);
+
+      // ==============================
+      // ROLE BASED NAVIGATION
+      // ==============================
 
       if (data.role === "PATIENT") {
         navigate("/patient-dashboard");
+
       } else if (data.role === "DOCTOR") {
         navigate("/doctor-dashboard");
+
       } else if (data.role === "ADMIN") {
         navigate("/admin-dashboard");
+
       } else {
         navigate("/");
       }
@@ -62,8 +98,10 @@ function Login() {
       console.error("Login error:", error);
 
       setError(
-        error.message || "Failed to connect to server"
+        error.message ||
+          "Failed to connect to server"
       );
+
     } finally {
       setLoading(false);
     }
@@ -78,12 +116,14 @@ function Login() {
 
         <h3>Login</h3>
 
+        {/* ERROR MESSAGE */}
         {error && (
           <div className="error-message">
             {error}
           </div>
         )}
 
+        {/* LOGIN FORM */}
         <form onSubmit={handleSubmit}>
 
           <input
@@ -108,7 +148,9 @@ function Login() {
             type="submit"
             disabled={loading}
           >
-            {loading ? "Logging in..." : "Login"}
+            {loading
+              ? "Logging in..."
+              : "Login"}
           </button>
 
         </form>
