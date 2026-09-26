@@ -2,33 +2,36 @@ import { useEffect, useState } from "react";
 import { getAuthHeaders, getUser } from "../utils/auth";
 import "./Dashboard.css";
 
-function PatientDashboard() {
+const API_URL = "https://hospital-backend-jcnb.onrender.com";
 
+function PatientDashboard() {
   const user = getUser();
 
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-
+  // ==============================
+  // FETCH APPOINTMENTS
+  // ==============================
   useEffect(() => {
-
     fetchAppointments();
-
   }, []);
 
-
   const fetchAppointments = async () => {
-
     try {
+      setError("");
 
       const response = await fetch(
-        "http://localhost:8080/appointments/my",
+        `${API_URL}/appointments/my`,
         {
-          headers: getAuthHeaders(),
+          method: "GET",
+          headers: {
+            ...getAuthHeaders(),
+            Accept: "application/json",
+          },
         }
       );
-
 
       const text = await response.text();
 
@@ -37,32 +40,40 @@ function PatientDashboard() {
       try {
         data = JSON.parse(text);
       } catch {
-        data = [];
+        data = text;
       }
-
 
       if (!response.ok) {
         throw new Error(
           typeof data === "string"
             ? data
-            : "Failed to load appointments"
+            : data?.message || "Failed to load appointments"
         );
       }
 
-
-      setAppointments(data);
+      setAppointments(
+        Array.isArray(data) ? data : []
+      );
 
     } catch (error) {
+      console.error(
+        "Appointments error:",
+        error
+      );
 
-      setError(error.message);
+      setError(
+        error.message ||
+          "Failed to connect to server"
+      );
 
     } finally {
-
       setLoading(false);
-
     }
   };
 
+  // ==============================
+  // APPOINTMENT FILTERS
+  // ==============================
 
   const upcoming = appointments.filter(
     (appointment) =>
@@ -70,18 +81,19 @@ function PatientDashboard() {
       appointment.status === "CONFIRMED"
   );
 
-
   const completed = appointments.filter(
     (appointment) =>
       appointment.status === "COMPLETED"
   );
-
 
   const cancelled = appointments.filter(
     (appointment) =>
       appointment.status === "CANCELLED"
   );
 
+  // ==============================
+  // LOADING
+  // ==============================
 
   if (loading) {
     return (
@@ -91,28 +103,37 @@ function PatientDashboard() {
     );
   }
 
+  // ==============================
+  // DASHBOARD
+  // ==============================
 
   return (
-
     <div className="dashboard-container">
 
+      {/* HEADER */}
       <div className="dashboard-header">
 
         <h1>Patient Dashboard</h1>
 
         <p>
-          Welcome, <strong>{user?.name}</strong>
+          Welcome,{" "}
+          <strong>
+            {user?.name || "Patient"}
+          </strong>
         </p>
 
       </div>
 
-
+      {/* ERROR */}
       {error && (
         <div className="error-message">
           {error}
         </div>
       )}
 
+      {/* ==============================
+          STATISTICS
+          ============================== */}
 
       <div className="stats-grid">
 
@@ -121,18 +142,15 @@ function PatientDashboard() {
           <p>{appointments.length}</p>
         </div>
 
-
         <div className="stat-card">
           <h3>Upcoming</h3>
           <p>{upcoming.length}</p>
         </div>
 
-
         <div className="stat-card">
           <h3>Completed</h3>
           <p>{completed.length}</p>
         </div>
-
 
         <div className="stat-card">
           <h3>Cancelled</h3>
@@ -141,24 +159,25 @@ function PatientDashboard() {
 
       </div>
 
+      {/* ==============================
+          MY APPOINTMENTS
+          ============================== */}
 
       <div className="dashboard-section">
 
         <h2>My Appointments</h2>
 
-
         {appointments.length === 0 ? (
 
-          <p>
-            No appointments found.
-          </p>
+          <p>No appointments found.</p>
 
         ) : (
 
           <div className="appointment-list">
 
-            {appointments.slice(0, 5).map(
-              (appointment) => (
+            {appointments
+              .slice(0, 5)
+              .map((appointment) => (
 
                 <div
                   className="appointment-card"
@@ -166,35 +185,42 @@ function PatientDashboard() {
                 >
 
                   <h3>
-                    Dr. {appointment.doctorName}
+                    Dr.{" "}
+                    {appointment.doctorName ||
+                      "Unknown Doctor"}
                   </h3>
 
                   <p>
-                    Specialization:{" "}
-                    {appointment.specialization}
-                  </p>
-
-                  <p>
-                    Date:{" "}
-                    {appointment.appointmentDate}
-                  </p>
-
-                  <p>
-                    Time:{" "}
-                    {appointment.appointmentTime}
-                  </p>
-
-                  <p>
-                    Status:{" "}
                     <strong>
-                      {appointment.status}
-                    </strong>
+                      Specialization:
+                    </strong>{" "}
+                    {appointment.specialization ||
+                      "Not available"}
+                  </p>
+
+                  <p>
+                    <strong>Date:</strong>{" "}
+                    {appointment.appointmentDate ||
+                      "Not available"}
+                  </p>
+
+                  <p>
+                    <strong>Time:</strong>{" "}
+                    {appointment.appointmentTime ||
+                      "Not available"}
+                  </p>
+
+                  <p>
+                    <strong>Status:</strong>{" "}
+                    <span>
+                      {appointment.status ||
+                        "UNKNOWN"}
+                    </span>
                   </p>
 
                 </div>
 
-              )
-            )}
+              ))}
 
           </div>
 
