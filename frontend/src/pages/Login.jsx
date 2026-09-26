@@ -46,10 +46,8 @@ function Login() {
         );
       }
 
-      // Save JWT + user
       saveAuth(data);
 
-      // Role based navigation
       if (data.role === "PATIENT") {
         navigate("/patient-dashboard");
       } else if (data.role === "DOCTOR") {
@@ -62,7 +60,10 @@ function Login() {
 
     } catch (error) {
       console.error("Login error:", error);
-      setError(error.message || "Failed to connect to server");
+
+      setError(
+        error.message || "Failed to connect to server"
+      );
     } finally {
       setLoading(false);
     }
