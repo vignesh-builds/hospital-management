@@ -3,6 +3,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { saveAuth } from "../utils/auth";
 import "./Login.css";
 
+const API_URL = "https://hospital-backend-jcnb.onrender.com";
+
 function Login() {
   const navigate = useNavigate();
 
@@ -14,14 +16,12 @@ function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-
   const handleChange = (event) => {
     setFormData({
       ...formData,
       [event.target.name]: event.target.value,
     });
   };
-
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -30,16 +30,13 @@ function Login() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        "http://localhost:8080/auth/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(formData),
-        }
-      );
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
 
       const data = await response.json();
 
@@ -51,7 +48,6 @@ function Login() {
 
       // Save JWT + user
       saveAuth(data);
-
 
       // Role based navigation
       if (data.role === "PATIENT") {
@@ -65,12 +61,12 @@ function Login() {
       }
 
     } catch (error) {
-      setError(error.message);
+      console.error("Login error:", error);
+      setError(error.message || "Failed to connect to server");
     } finally {
       setLoading(false);
     }
   };
-
 
   return (
     <div className="auth-container">
@@ -87,7 +83,6 @@ function Login() {
           </div>
         )}
 
-
         <form onSubmit={handleSubmit}>
 
           <input
@@ -99,7 +94,6 @@ function Login() {
             required
           />
 
-
           <input
             type="password"
             name="password"
@@ -109,7 +103,6 @@ function Login() {
             required
           />
 
-
           <button
             type="submit"
             disabled={loading}
@@ -118,7 +111,6 @@ function Login() {
           </button>
 
         </form>
-
 
         <p>
           Don't have an account?{" "}
