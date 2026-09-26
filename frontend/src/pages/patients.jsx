@@ -1,4 +1,4 @@
-import "./Patients.css";
+import "./patients.css";
 import { useEffect, useState } from "react";
 
 function Patients() {
