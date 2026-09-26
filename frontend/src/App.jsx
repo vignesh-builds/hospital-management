@@ -9,7 +9,7 @@ import Navbar from "./components/Navbar";
 
 import Home from "./pages/Home";
 import Doctors from "./pages/Doctors";
-import Patients from "./pages/Patients";
+import Patients from "./pages/patients";
 import Appointments from "./pages/Appointments";
 
 import Login from "./pages/Login";
