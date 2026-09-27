@@ -22,50 +22,92 @@ public class SecurityConfig {
             HttpSecurity http) throws Exception {
 
         http
-                // ==============================
-                // CORS
-                // ==============================
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // ==============================
+                // ==================================================
+                // CORS
+                // ==================================================
+
+                .cors(cors ->
+                        cors.configurationSource(
+                                corsConfigurationSource()
+                        )
+                )
+
+                // ==================================================
                 // CSRF
-                // ==============================
+                // ==================================================
+
                 .csrf(csrf -> csrf.disable())
 
-                // ==============================
+                // ==================================================
                 // SESSION
-                // ==============================
+                // ==================================================
+
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
                                 SessionCreationPolicy.STATELESS
                         )
                 )
 
-                // ==============================
+                // ==================================================
                 // AUTHORIZATION
-                // ==============================
+                // ==================================================
+
                 .authorizeHttpRequests(auth -> auth
 
-                        // CORS preflight
+                        // ------------------------------------------------
+                        // CORS PREFLIGHT
+                        // ------------------------------------------------
+
                         .requestMatchers(
                                 HttpMethod.OPTIONS,
                                 "/**"
                         ).permitAll()
 
-                        // Authentication
+
+                        // ------------------------------------------------
+                        // AUTHENTICATION
+                        // ------------------------------------------------
+
                         .requestMatchers(
                                 "/auth/**"
                         ).permitAll()
 
-                        // Public APIs
+
+                        // ------------------------------------------------
+                        // PUBLIC HOME / HEALTH
+                        // ------------------------------------------------
+
                         .requestMatchers(
                                 "/",
-                                "/health",
-                                "/api/**",
-                                "/doctors"
+                                "/health"
                         ).permitAll()
 
-                        // Everything else
+
+                        // ------------------------------------------------
+                        // PUBLIC DOCTOR APIs
+                        // ------------------------------------------------
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/doctors",
+                                "/doctors/**"
+                        ).permitAll()
+
+
+                        // ------------------------------------------------
+                        // PUBLIC API
+                        // ------------------------------------------------
+
+                        .requestMatchers(
+                                "/api/**"
+                        ).permitAll()
+
+
+                        // ------------------------------------------------
+                        // EVERYTHING ELSE
+                        // ------------------------------------------------
+
                         .anyRequest().authenticated()
                 );
 
@@ -73,9 +115,9 @@ public class SecurityConfig {
     }
 
 
-    // ==========================================================
+    // ==============================================================
     // CORS CONFIGURATION
-    // ==========================================================
+    // ==============================================================
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -83,13 +125,30 @@ public class SecurityConfig {
         CorsConfiguration configuration =
                 new CorsConfiguration();
 
+
+        // ==========================================================
+        // ALLOWED FRONTENDS
+        // ==========================================================
+
         configuration.setAllowedOrigins(List.of(
+
+                // React local
                 "http://localhost:5173",
+
+                // React alternative local
                 "http://localhost:3000",
+
+                // Render frontend
                 "https://hospital-frontend-7jfj.onrender.com"
         ));
 
+
+        // ==========================================================
+        // ALLOWED METHODS
+        // ==========================================================
+
         configuration.setAllowedMethods(List.of(
+
                 "GET",
                 "POST",
                 "PUT",
@@ -98,7 +157,13 @@ public class SecurityConfig {
                 "OPTIONS"
         ));
 
+
+        // ==========================================================
+        // ALLOWED HEADERS
+        // ==========================================================
+
         configuration.setAllowedHeaders(List.of(
+
                 "Authorization",
                 "Content-Type",
                 "Accept",
@@ -106,11 +171,26 @@ public class SecurityConfig {
                 "X-Requested-With"
         ));
 
+
+        // ==========================================================
+        // CREDENTIALS
+        // ==========================================================
+
         configuration.setAllowCredentials(true);
+
+
+        // ==========================================================
+        // EXPOSED HEADERS
+        // ==========================================================
 
         configuration.setExposedHeaders(List.of(
                 "Authorization"
         ));
+
+
+        // ==========================================================
+        // REGISTER CORS
+        // ==========================================================
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
@@ -119,6 +199,7 @@ public class SecurityConfig {
                 "/**",
                 configuration
         );
+
 
         return source;
     }
