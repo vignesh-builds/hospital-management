@@ -2,89 +2,121 @@ const API_URL =
   import.meta.env.VITE_API_URL ||
   "http://localhost:8080";
 
+
 export const API = API_URL;
 
 
-// ==============================
+// =====================================================
 // GET TOKEN
-// ==============================
+// =====================================================
 
 export const getToken = () => {
+
   return localStorage.getItem("token");
 };
 
 
-// ==============================
+// =====================================================
 // GET USER
-// ==============================
+// =====================================================
 
 export const getUser = () => {
-  const user = localStorage.getItem("user");
+
+  const user =
+    localStorage.getItem("user");
+
 
   if (!user) {
     return null;
   }
 
+
   try {
+
     return JSON.parse(user);
-  } catch (error) {
-    console.log("Invalid user data:", error);
+
+  } catch {
+
     return null;
   }
 };
 
 
-// ==============================
-// SAVE LOGIN DATA
-// ==============================
+// =====================================================
+// SAVE AUTH
+// =====================================================
 
 export const saveAuth = (data) => {
-  localStorage.setItem("token", data.token);
+
+  localStorage.setItem(
+    "token",
+    data.token
+  );
+
 
   localStorage.setItem(
     "user",
+
     JSON.stringify({
+
       id: data.id,
+
       name: data.name,
+
       email: data.email,
-      role: data.role,
+
+      role: data.role
+
     })
   );
 };
 
 
-// ==============================
+// =====================================================
 // LOGOUT
-// ==============================
+// =====================================================
 
 export const logout = () => {
+
   localStorage.removeItem("token");
+
   localStorage.removeItem("user");
 };
 
 
-// ==============================
-// CHECK LOGIN
-// ==============================
+// =====================================================
+// LOGIN CHECK
+// =====================================================
 
 export const isLoggedIn = () => {
-  const token = getToken();
 
-  return token !== null && token !== "";
+  return !!getToken();
 };
 
 
-// ==============================
+// =====================================================
 // AUTH HEADERS
-// ==============================
+// =====================================================
 
 export const getAuthHeaders = () => {
+
   const token = getToken();
 
-  return {
-    "Content-Type": "application/json",
-    Authorization: token
-      ? `Bearer ${token}`
-      : "",
+
+  const headers = {
+
+    "Content-Type": "application/json"
+
   };
+
+
+  if (token) {
+
+    headers.Authorization =
+      `Bearer ${token}`;
+
+  }
+
+
+  return headers;
 };
