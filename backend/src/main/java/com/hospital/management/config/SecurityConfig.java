@@ -4,14 +4,18 @@ import java.util.List;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
 import org.springframework.http.HttpMethod;
+
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
 
 @Configuration
 @EnableMethodSecurity
@@ -23,46 +27,69 @@ public class SecurityConfig {
     ) throws Exception {
 
         http
-                .cors(cors ->
-                        cors.configurationSource(corsConfigurationSource())
-                )
 
-                .csrf(csrf -> csrf.disable())
+            // =====================================================
+            // CORS
+            // =====================================================
+            .cors(cors ->
+                    cors.configurationSource(corsConfigurationSource())
+            )
 
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(
-                                SessionCreationPolicy.STATELESS
-                        )
-                )
+            // =====================================================
+            // CSRF
+            // =====================================================
+            .csrf(csrf -> csrf.disable())
 
-                .authorizeHttpRequests(auth -> auth
+            // =====================================================
+            // SESSION
+            // =====================================================
+            .sessionManagement(session ->
+                    session.sessionCreationPolicy(
+                            SessionCreationPolicy.STATELESS
+                    )
+            )
 
-                        // Login / Register
-                        .requestMatchers("/auth/**")
-                        .permitAll()
+            // =====================================================
+            // AUTHORIZATION
+            // =====================================================
+            .authorizeHttpRequests(auth -> auth
 
-                        // CORS preflight
-                        .requestMatchers(
-                                HttpMethod.OPTIONS,
-                                "/**"
-                        )
-                        .permitAll()
+                    // ---------------------------------------------
+                    // CORS PREFLIGHT
+                    // ---------------------------------------------
+                    .requestMatchers(
+                            HttpMethod.OPTIONS,
+                            "/**"
+                    ).permitAll()
 
-                        // Public APIs
-                        .requestMatchers(
-                                "/",
-                                "/health",
-                                "/api/**"
-                        )
-                        .permitAll()
+                    // ---------------------------------------------
+                    // AUTH APIs
+                    // ---------------------------------------------
+                    .requestMatchers(
+                            "/auth/**"
+                    ).permitAll()
 
-                        // Everything else requires JWT
-                        .anyRequest()
-                        .authenticated()
-                );
+                    // ---------------------------------------------
+                    // PUBLIC APIs
+                    // ---------------------------------------------
+                    .requestMatchers(
+                            "/",
+                            "/health"
+                    ).permitAll()
+
+                    // ---------------------------------------------
+                    // EVERYTHING ELSE
+                    // ---------------------------------------------
+                    .anyRequest().authenticated()
+            );
 
         return http.build();
     }
+
+
+    // =============================================================
+    // CORS CONFIGURATION
+    // =============================================================
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -70,22 +97,40 @@ public class SecurityConfig {
         CorsConfiguration configuration =
                 new CorsConfiguration();
 
+        // =========================================================
+        // FRONTEND ORIGINS
+        // =========================================================
+
         configuration.setAllowedOrigins(List.of(
+
+                // Local React
                 "http://localhost:5173",
+
+                // Local React alternative
                 "http://localhost:3000",
 
-                // Your Render frontend
+                // Render React frontend
                 "https://hospital-frontend-7jfj.onrender.com"
         ));
+
+
+        // =========================================================
+        // METHODS
+        // =========================================================
 
         configuration.setAllowedMethods(List.of(
                 "GET",
                 "POST",
                 "PUT",
-                "DELETE",
                 "PATCH",
+                "DELETE",
                 "OPTIONS"
         ));
+
+
+        // =========================================================
+        // HEADERS
+        // =========================================================
 
         configuration.setAllowedHeaders(List.of(
                 "Authorization",
@@ -95,11 +140,33 @@ public class SecurityConfig {
                 "X-Requested-With"
         ));
 
+
+        // =========================================================
+        // CREDENTIALS
+        // =========================================================
+
         configuration.setAllowCredentials(true);
+
+
+        // =========================================================
+        // EXPOSE HEADERS
+        // =========================================================
 
         configuration.setExposedHeaders(List.of(
                 "Authorization"
         ));
+
+
+        // =========================================================
+        // CACHE PREFLIGHT
+        // =========================================================
+
+        configuration.setMaxAge(3600L);
+
+
+        // =========================================================
+        // REGISTER
+        // =========================================================
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
