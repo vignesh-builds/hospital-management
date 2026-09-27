@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { saveAuth } from "../utils/auth";
+import {
+  API,
+  saveAuth,
+} from "../utils/auth";
 import "./Login.css";
-
-const API_URL = "https://hospital-backend-jcnb.onrender.com";
 
 function Login() {
   const navigate = useNavigate();
@@ -16,19 +17,23 @@ function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ==============================
+
+  // =========================================================
   // HANDLE INPUT CHANGE
-  // ==============================
+  // =========================================================
+
   const handleChange = (event) => {
-    setFormData({
-      ...formData,
+    setFormData((previous) => ({
+      ...previous,
       [event.target.name]: event.target.value,
-    });
+    }));
   };
 
-  // ==============================
+
+  // =========================================================
   // LOGIN
-  // ==============================
+  // =========================================================
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
@@ -36,8 +41,9 @@ function Login() {
     setLoading(true);
 
     try {
+
       const response = await fetch(
-        `${API_URL}/auth/login`,
+        `${API}/auth/login`,
         {
           method: "POST",
 
@@ -53,77 +59,160 @@ function Login() {
         }
       );
 
+
+      // =====================================================
+      // READ RESPONSE
+      // =====================================================
+
       const text = await response.text();
 
-      let data;
+      let data = null;
 
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = text;
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = text;
+        }
       }
 
+
+      // =====================================================
+      // LOGIN FAILED
+      // =====================================================
+
       if (!response.ok) {
-        throw new Error(
+
+        const message =
           typeof data === "string"
             ? data
             : data?.message ||
-              "Invalid email or password"
+              data?.error ||
+              "Invalid email or password";
+
+        throw new Error(message);
+      }
+
+
+      // =====================================================
+      // CHECK TOKEN
+      // =====================================================
+
+      if (!data || !data.token) {
+        throw new Error(
+          "Login successful, but JWT token was not received."
         );
       }
 
-      // ==============================
-      // SAVE LOGIN DATA
-      // ==============================
-      saveAuth(data);
 
-      // ==============================
+      // =====================================================
+      // NORMALIZE ROLE
+      // =====================================================
+
+      const role = String(
+        data.role || ""
+      )
+        .replace("ROLE_", "")
+        .toUpperCase();
+
+
+      if (!role) {
+        throw new Error(
+          "Login successful, but user role was not received."
+        );
+      }
+
+
+      // =====================================================
+      // SAVE AUTH DATA
+      // =====================================================
+
+      saveAuth({
+        ...data,
+        role,
+      });
+
+
+      // =====================================================
       // ROLE BASED NAVIGATION
-      // ==============================
+      // =====================================================
 
-      if (data.role === "PATIENT") {
-        navigate("/patient-dashboard");
+      if (role === "PATIENT") {
 
-      } else if (data.role === "DOCTOR") {
-        navigate("/doctor-dashboard");
+        navigate(
+          "/patient-dashboard",
+          { replace: true }
+        );
 
-      } else if (data.role === "ADMIN") {
-        navigate("/admin-dashboard");
+      } else if (role === "DOCTOR") {
+
+        navigate(
+          "/doctor-dashboard",
+          { replace: true }
+        );
+
+      } else if (role === "ADMIN") {
+
+        navigate(
+          "/admin-dashboard",
+          { replace: true }
+        );
 
       } else {
-        navigate("/");
+
+        throw new Error(
+          `Unknown user role: ${role}`
+        );
       }
 
     } catch (error) {
-      console.error("Login error:", error);
+
+      console.error(
+        "Login error:",
+        error
+      );
 
       setError(
         error.message ||
-          "Failed to connect to server"
+        "Failed to connect to server"
       );
 
     } finally {
+
       setLoading(false);
     }
   };
+
+
+  // =========================================================
+  // UI
+  // =========================================================
 
   return (
     <div className="auth-container">
 
       <div className="auth-card">
 
-        <h2>Hospital Management System</h2>
+        <h2>
+          Hospital Management System
+        </h2>
 
-        <h3>Login</h3>
+        <h3>
+          Login
+        </h3>
+
 
         {/* ERROR MESSAGE */}
+
         {error && (
           <div className="error-message">
             {error}
           </div>
         )}
 
+
         {/* LOGIN FORM */}
+
         <form onSubmit={handleSubmit}>
 
           <input
@@ -132,8 +221,10 @@ function Login() {
             placeholder="Email"
             value={formData.email}
             onChange={handleChange}
+            autoComplete="email"
             required
           />
+
 
           <input
             type="password"
@@ -141,8 +232,10 @@ function Login() {
             placeholder="Password"
             value={formData.password}
             onChange={handleChange}
+            autoComplete="current-password"
             required
           />
+
 
           <button
             type="submit"
@@ -155,8 +248,10 @@ function Login() {
 
         </form>
 
+
         <p>
           Don't have an account?{" "}
+
           <Link to="/register">
             Register
           </Link>
