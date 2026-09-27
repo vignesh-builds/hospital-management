@@ -2,41 +2,44 @@ const API_URL =
   import.meta.env.VITE_API_URL ||
   "http://localhost:8080";
 
-
 export const API = API_URL;
 
+
+// ==============================
+// GET TOKEN
+// ==============================
 
 export const getToken = () => {
   return localStorage.getItem("token");
 };
 
 
-export const getUser = () => {
+// ==============================
+// GET USER
+// ==============================
 
-  const user =
-    localStorage.getItem("user");
+export const getUser = () => {
+  const user = localStorage.getItem("user");
 
   if (!user) {
     return null;
   }
 
   try {
-
     return JSON.parse(user);
-
-  } catch {
-
+  } catch (error) {
+    console.log("Invalid user data:", error);
     return null;
   }
 };
 
 
-export const saveAuth = (data) => {
+// ==============================
+// SAVE LOGIN DATA
+// ==============================
 
-  localStorage.setItem(
-    "token",
-    data.token
-  );
+export const saveAuth = (data) => {
+  localStorage.setItem("token", data.token);
 
   localStorage.setItem(
     "user",
@@ -50,26 +53,38 @@ export const saveAuth = (data) => {
 };
 
 
+// ==============================
+// LOGOUT
+// ==============================
+
 export const logout = () => {
-
   localStorage.removeItem("token");
-
   localStorage.removeItem("user");
 };
 
 
-export const isLoggedIn = () => {
+// ==============================
+// CHECK LOGIN
+// ==============================
 
-  return !!getToken();
+export const isLoggedIn = () => {
+  const token = getToken();
+
+  return token !== null && token !== "";
 };
 
 
-export const getAuthHeaders = () => {
+// ==============================
+// AUTH HEADERS
+// ==============================
 
+export const getAuthHeaders = () => {
   const token = getToken();
 
   return {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
+    Authorization: token
+      ? `Bearer ${token}`
+      : "",
   };
 };
