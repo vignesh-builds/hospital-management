@@ -14,25 +14,19 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-
 import org.springframework.security.core.context.SecurityContextHolder;
-
 import org.springframework.stereotype.Component;
-
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
 
-
 @Component
 public class JwtAuthenticationFilter
         extends OncePerRequestFilter {
 
-
     @Autowired
     private JwtService jwtService;
-
 
     @Autowired
     private UserRepository userRepository;
@@ -46,21 +40,38 @@ public class JwtAuthenticationFilter
             throws ServletException, IOException {
 
 
-        String authHeader =
-                request.getHeader("Authorization");
+        // =====================================================
+        // ALLOW CORS PREFLIGHT
+        // =====================================================
 
-
-        // ======================================================
-        // NO TOKEN
-        // ======================================================
-
-        if (authHeader == null ||
-                !authHeader.startsWith("Bearer ")) {
+        if ("OPTIONS".equalsIgnoreCase(
+                request.getMethod())) {
 
             filterChain.doFilter(request, response);
             return;
         }
 
+
+        // =====================================================
+        // GET AUTHORIZATION HEADER
+        // =====================================================
+
+        String authHeader =
+                request.getHeader("Authorization");
+
+
+        // No JWT → continue
+        if (authHeader == null
+                || !authHeader.startsWith("Bearer ")) {
+
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+
+        // =====================================================
+        // EXTRACT TOKEN
+        // =====================================================
 
         String token =
                 authHeader.substring(7);
@@ -68,9 +79,9 @@ public class JwtAuthenticationFilter
 
         try {
 
-            // ==================================================
+            // =================================================
             // VALIDATE JWT
-            // ==================================================
+            // =================================================
 
             Claims claims =
                     Jwts.parser()
@@ -90,48 +101,26 @@ public class JwtAuthenticationFilter
                     claims.get("role", String.class);
 
 
-            // ==================================================
+            // =================================================
             // CHECK USER
-            // ==================================================
+            // =================================================
 
-            if (email == null ||
-                    userRepository
-                            .findByEmail(email)
-                            .isEmpty()) {
+            if (userRepository
+                    .findByEmail(email)
+                    .isEmpty()) {
 
-                filterChain.doFilter(request, response);
+                filterChain.doFilter(
+                        request,
+                        response
+                );
+
                 return;
             }
 
 
-            // ==================================================
-            // CHECK ROLE
-            // ==================================================
-
-            if (role == null ||
-                    role.trim().isEmpty()) {
-
-                filterChain.doFilter(request, response);
-                return;
-            }
-
-
-            role = role.trim().toUpperCase();
-
-
-            // Prevent ROLE_ROLE_PATIENT
-            if (role.startsWith("ROLE_")) {
-                role = role.substring(5);
-            }
-
-
-            String authority =
-                    "ROLE_" + role;
-
-
-            // ==================================================
+            // =================================================
             // CREATE AUTHENTICATION
-            // ==================================================
+            // =================================================
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
@@ -139,7 +128,7 @@ public class JwtAuthenticationFilter
                             null,
                             Collections.singletonList(
                                     new SimpleGrantedAuthority(
-                                            authority
+                                            "ROLE_" + role
                                     )
                             )
                     );
@@ -152,14 +141,6 @@ public class JwtAuthenticationFilter
                     );
 
 
-            System.out.println(
-                    "JWT authenticated: "
-                            + email
-                            + " | ROLE_"
-                            + role
-            );
-
-
         } catch (Exception exception) {
 
             System.out.println(
@@ -167,8 +148,6 @@ public class JwtAuthenticationFilter
                             + exception.getMessage()
             );
 
-            SecurityContextHolder
-                    .clearContext();
         }
 
 
