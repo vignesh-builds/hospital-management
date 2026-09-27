@@ -1,39 +1,78 @@
 import {
   API,
+  getToken,
   getAuthHeaders,
   logout,
 } from "./auth";
 
+
+// ==========================================================
+// COMMON API REQUEST
+// ==========================================================
 
 export const apiRequest = async (
   endpoint,
   options = {}
 ) => {
 
-  const token =
-    localStorage.getItem("token");
+  const token = getToken();
 
+
+  // ========================================================
+  // HEADERS
+  // ========================================================
 
   const headers = {
-    ...getAuthHeaders(),
+    ...(options.body
+      ? { "Content-Type": "application/json" }
+      : {}),
     ...(options.headers || {}),
   };
 
 
-  if (!token) {
+  // ========================================================
+  // ADD JWT TOKEN
+  // ========================================================
 
-    delete headers.Authorization;
+  if (token) {
+
+    headers.Authorization =
+      `Bearer ${token}`;
   }
 
 
-  const response = await fetch(
-    `${API}${endpoint}`,
-    {
-      ...options,
-      headers,
-    }
-  );
+  // ========================================================
+  // REQUEST
+  // ========================================================
 
+  let response;
+
+  try {
+
+    response = await fetch(
+      `${API}${endpoint}`,
+      {
+        ...options,
+        headers,
+      }
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Network error:",
+      error
+    );
+
+    throw new Error(
+      "Unable to connect to server."
+    );
+  }
+
+
+  // ========================================================
+  // READ RESPONSE
+  // ========================================================
 
   const text =
     await response.text();
@@ -55,7 +94,10 @@ export const apiRequest = async (
   }
 
 
-  // JWT expired / unauthorized
+  // ========================================================
+  // 401 - UNAUTHORIZED
+  // ========================================================
+
   if (response.status === 401) {
 
     logout();
@@ -69,14 +111,27 @@ export const apiRequest = async (
   }
 
 
-  // Forbidden
+  // ========================================================
+  // 403 - FORBIDDEN
+  // ========================================================
+
   if (response.status === 403) {
+
+    console.error(
+      "403 Forbidden:",
+      endpoint,
+      data
+    );
 
     throw new Error(
       "You are not authorized to perform this action."
     );
   }
 
+
+  // ========================================================
+  // OTHER ERRORS
+  // ========================================================
 
   if (!response.ok) {
 
@@ -90,12 +145,16 @@ export const apiRequest = async (
 
         ? data
 
-        : "Request failed";
+        : `Request failed (${response.status})`;
 
 
     throw new Error(message);
   }
 
+
+  // ========================================================
+  // SUCCESS
+  // ========================================================
 
   return data;
 };
