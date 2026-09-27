@@ -1,11 +1,10 @@
 package com.hospital.management.config;
 
-import java.util.List;
-
 import com.hospital.management.security.JwtAuthenticationFilter;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -27,84 +26,70 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
 
     @Bean
     public SecurityFilterChain securityFilterChain(
-            HttpSecurity http
-    ) throws Exception {
-
+            HttpSecurity http) throws Exception {
 
         http
 
-            // =================================================
+            // ==============================
             // CORS
-            // =================================================
-
+            // ==============================
             .cors(cors ->
                     cors.configurationSource(
                             corsConfigurationSource()
                     )
             )
 
-
-            // =================================================
+            // ==============================
             // CSRF
-            // =================================================
+            // ==============================
+            .csrf(csrf ->
+                    csrf.disable()
+            )
 
-            .csrf(csrf -> csrf.disable())
-
-
-            // =================================================
+            // ==============================
             // SESSION
-            // =================================================
-
+            // ==============================
             .sessionManagement(session ->
                     session.sessionCreationPolicy(
                             SessionCreationPolicy.STATELESS
                     )
             )
 
-
-            // =================================================
+            // ==============================
             // AUTHORIZATION
-            // =================================================
-
+            // ==============================
             .authorizeHttpRequests(auth -> auth
 
+                    // Authentication
+                    .requestMatchers(
+                            "/auth/**"
+                    ).permitAll()
 
-                    // OPTIONS
+                    // OPTIONS / CORS preflight
                     .requestMatchers(
                             HttpMethod.OPTIONS,
                             "/**"
                     ).permitAll()
 
-
-                    // LOGIN / REGISTER
-                    .requestMatchers(
-                            "/auth/**"
-                    ).permitAll()
-
-
-                    // PUBLIC
+                    // Public endpoints
                     .requestMatchers(
                             "/",
                             "/health"
                     ).permitAll()
 
-
-                    // ALL OTHER APIs
+                    // Everything else requires JWT
                     .anyRequest().authenticated()
             )
 
-
-            // =================================================
+            // ==============================
             // JWT FILTER
-            // =================================================
-
+            // ==============================
             .addFilterBefore(
                     jwtAuthenticationFilter,
                     UsernamePasswordAuthenticationFilter.class
@@ -115,41 +100,49 @@ public class SecurityConfig {
     }
 
 
-    // =========================================================
-    // CORS
-    // =========================================================
+    // ==========================================================
+    // CORS CONFIGURATION
+    // ==========================================================
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-
 
         CorsConfiguration configuration =
                 new CorsConfiguration();
 
 
+        // ------------------------------------------------------
+        // ALLOWED FRONTENDS
+        // ------------------------------------------------------
+
         configuration.setAllowedOrigins(
                 List.of(
-
                         "http://localhost:5173",
-
                         "http://localhost:3000",
-
                         "https://hospital-frontend-7jfj.onrender.com"
                 )
         );
 
+
+        // ------------------------------------------------------
+        // METHODS
+        // ------------------------------------------------------
 
         configuration.setAllowedMethods(
                 List.of(
                         "GET",
                         "POST",
                         "PUT",
-                        "PATCH",
                         "DELETE",
+                        "PATCH",
                         "OPTIONS"
                 )
         );
 
+
+        // ------------------------------------------------------
+        // HEADERS
+        // ------------------------------------------------------
 
         configuration.setAllowedHeaders(
                 List.of(
@@ -162,8 +155,16 @@ public class SecurityConfig {
         );
 
 
+        // ------------------------------------------------------
+        // CREDENTIALS
+        // ------------------------------------------------------
+
         configuration.setAllowCredentials(true);
 
+
+        // ------------------------------------------------------
+        // EXPOSE HEADERS
+        // ------------------------------------------------------
 
         configuration.setExposedHeaders(
                 List.of(
@@ -172,12 +173,12 @@ public class SecurityConfig {
         );
 
 
-        configuration.setMaxAge(3600L);
-
+        // ------------------------------------------------------
+        // REGISTER
+        // ------------------------------------------------------
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
-
 
         source.registerCorsConfiguration(
                 "/**",
