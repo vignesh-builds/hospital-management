@@ -16,20 +16,25 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
 
+
 @Component
 public class JwtAuthenticationFilter
         extends OncePerRequestFilter {
 
+
     @Autowired
     private JwtService jwtService;
 
+
     @Autowired
     private UserRepository userRepository;
+
 
     @Override
     protected void doFilterInternal(
@@ -38,51 +43,97 @@ public class JwtAuthenticationFilter
             FilterChain filterChain
     ) throws ServletException, IOException {
 
+
+        // =====================================================
+        // IMPORTANT
+        // =====================================================
+        // OPTIONS request should NEVER be processed by JWT logic.
+
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+
+            filterChain.doFilter(request, response);
+
+            return;
+        }
+
+
+        // =====================================================
+        // GET AUTHORIZATION HEADER
+        // =====================================================
+
         String authHeader =
                 request.getHeader("Authorization");
 
-        // No token
-        if (authHeader == null ||
-                !authHeader.startsWith("Bearer ")) {
+
+        // =====================================================
+        // NO TOKEN
+        // =====================================================
+
+        if (
+                authHeader == null ||
+                !authHeader.startsWith("Bearer ")
+        ) {
 
             filterChain.doFilter(request, response);
+
             return;
         }
+
+
+        // =====================================================
+        // EXTRACT TOKEN
+        // =====================================================
 
         String token =
                 authHeader.substring(7);
 
+
         try {
+
+            // =================================================
+            // VALIDATE JWT
+            // =================================================
 
             Claims claims =
                     Jwts.parser()
+
                             .verifyWith(
                                     jwtService.getSecretKey()
                             )
+
                             .build()
+
                             .parseSignedClaims(token)
+
                             .getPayload();
+
+
+            // =================================================
+            // EMAIL
+            // =================================================
 
             String email =
                     claims.getSubject();
 
+
+            // =================================================
+            // ROLE
+            // =================================================
+
             String role =
                     claims.get("role", String.class);
 
-            System.out.println(
-                    "JWT email: " + email
-            );
 
-            System.out.println(
-                    "JWT role: " + role
-            );
+            // =================================================
+            // USER CHECK
+            // =================================================
 
-            // Email missing
-            if (email == null || email.isBlank()) {
-
-                System.out.println(
-                        "JWT email is missing"
-                );
+            if (
+                    email == null ||
+                    userRepository
+                            .findByEmail(email)
+                            .isEmpty()
+            ) {
 
                 filterChain.doFilter(
                         request,
@@ -92,29 +143,12 @@ public class JwtAuthenticationFilter
                 return;
             }
 
-            // Role missing
-            if (role == null || role.isBlank()) {
 
-                System.out.println(
-                        "JWT role is missing"
-                );
+            // =================================================
+            // ROLE CHECK
+            // =================================================
 
-                filterChain.doFilter(
-                        request,
-                        response
-                );
-
-                return;
-            }
-
-            // User does not exist
-            if (userRepository
-                    .findByEmail(email)
-                    .isEmpty()) {
-
-                System.out.println(
-                        "User not found: " + email
-                );
+            if (role == null) {
 
                 filterChain.doFilter(
                         request,
@@ -124,24 +158,32 @@ public class JwtAuthenticationFilter
                 return;
             }
 
-            // Remove ROLE_ if already present
-            if (role.startsWith("ROLE_")) {
-                role = role.substring(5);
-            }
 
-            SimpleGrantedAuthority authority =
-                    new SimpleGrantedAuthority(
-                            "ROLE_" + role
-                    );
+            // =================================================
+            // CREATE AUTHENTICATION
+            // =================================================
 
             UsernamePasswordAuthenticationToken authentication =
+
                     new UsernamePasswordAuthenticationToken(
+
                             email,
+
                             null,
+
                             Collections.singletonList(
-                                    authority
+
+                                    new SimpleGrantedAuthority(
+                                            "ROLE_" + role
+                                    )
+
                             )
                     );
+
+
+            // =================================================
+            // SET SECURITY CONTEXT
+            // =================================================
 
             SecurityContextHolder
                     .getContext()
@@ -149,22 +191,20 @@ public class JwtAuthenticationFilter
                             authentication
                     );
 
-            System.out.println(
-                    "Authentication successful for: "
-                            + email
-                            + " | ROLE_" + role
-            );
 
         } catch (Exception exception) {
 
             System.out.println(
-                    "JWT authentication failed: "
+                    "Invalid JWT token: "
                             + exception.getMessage()
             );
 
-            SecurityContextHolder
-                    .clearContext();
         }
+
+
+        // =====================================================
+        // CONTINUE FILTER CHAIN
+        // =====================================================
 
         filterChain.doFilter(
                 request,
