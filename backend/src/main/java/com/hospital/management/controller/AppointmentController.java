@@ -13,7 +13,6 @@ import java.time.LocalTime;
 import java.util.List;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:5173")
 @RequestMapping("/appointments")
 public class AppointmentController {
 
@@ -22,7 +21,7 @@ public class AppointmentController {
 
 
     // =========================================================
-    // CREATE
+    // CREATE APPOINTMENT
     // =========================================================
 
     @PreAuthorize("hasAnyRole('PATIENT', 'ADMIN')")
@@ -37,13 +36,13 @@ public class AppointmentController {
 
 
     // =========================================================
-    // GET ALL
+    // GET ALL APPOINTMENTS
+    // ADMIN + DOCTOR
     // =========================================================
 
     @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN')")
     @GetMapping
-    public List<AppointmentResponseDTO>
-    getAllAppointments() {
+    public List<AppointmentResponseDTO> getAllAppointments() {
 
         return appointmentService.getAllAppointments();
     }
@@ -51,12 +50,12 @@ public class AppointmentController {
 
     // =========================================================
     // MY APPOINTMENTS
+    // PATIENT ONLY
     // =========================================================
 
     @PreAuthorize("hasRole('PATIENT')")
     @GetMapping("/my")
-    public List<AppointmentResponseDTO>
-    getMyAppointments() {
+    public List<AppointmentResponseDTO> getMyAppointments() {
 
         return appointmentService.getMyAppointments();
     }
@@ -64,12 +63,12 @@ public class AppointmentController {
 
     // =========================================================
     // PATIENT APPOINTMENTS
+    // DOCTOR + ADMIN
     // =========================================================
 
     @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN')")
     @GetMapping("/patient/{patientId}")
-    public List<AppointmentResponseDTO>
-    getAppointmentsByPatient(
+    public List<AppointmentResponseDTO> getAppointmentsByPatient(
             @PathVariable Long patientId) {
 
         return appointmentService
@@ -79,12 +78,12 @@ public class AppointmentController {
 
     // =========================================================
     // DOCTOR APPOINTMENTS
+    // DOCTOR + ADMIN
     // =========================================================
 
     @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN')")
     @GetMapping("/doctor")
-    public List<AppointmentResponseDTO>
-    getAppointmentsByDoctor() {
+    public List<AppointmentResponseDTO> getAppointmentsByDoctor() {
 
         return appointmentService
                 .getAppointmentsByDoctor();
@@ -92,13 +91,13 @@ public class AppointmentController {
 
 
     // =========================================================
-    // GET BY ID
+    // GET APPOINTMENT BY ID
+    // DOCTOR + ADMIN
     // =========================================================
 
     @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN')")
     @GetMapping("/{id}")
-    public AppointmentResponseDTO
-    getAppointmentById(
+    public AppointmentResponseDTO getAppointmentById(
             @PathVariable Long id) {
 
         return appointmentService
@@ -108,6 +107,7 @@ public class AppointmentController {
 
     // =========================================================
     // UPDATE
+    // DOCTOR + ADMIN
     // =========================================================
 
     @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN')")
@@ -117,12 +117,16 @@ public class AppointmentController {
             @RequestBody Appointment appointment) {
 
         return appointmentService
-                .updateAppointment(id, appointment);
+                .updateAppointment(
+                        id,
+                        appointment
+                );
     }
 
 
     // =========================================================
     // CONFIRM
+    // DOCTOR ONLY
     // =========================================================
 
     @PreAuthorize("hasRole('DOCTOR')")
@@ -137,6 +141,7 @@ public class AppointmentController {
 
     // =========================================================
     // COMPLETE
+    // DOCTOR ONLY
     // =========================================================
 
     @PreAuthorize("hasRole('DOCTOR')")
@@ -151,9 +156,12 @@ public class AppointmentController {
 
     // =========================================================
     // CANCEL
+    // PATIENT + DOCTOR + ADMIN
     // =========================================================
 
-    @PreAuthorize("hasAnyRole('PATIENT', 'DOCTOR', 'ADMIN')")
+    @PreAuthorize(
+            "hasAnyRole('PATIENT', 'DOCTOR', 'ADMIN')"
+    )
     @PutMapping("/{id}/cancel")
     public AppointmentResponseDTO cancelAppointment(
             @PathVariable Long id) {
@@ -165,9 +173,12 @@ public class AppointmentController {
 
     // =========================================================
     // RESCHEDULE
+    // PATIENT + DOCTOR + ADMIN
     // =========================================================
 
-    @PreAuthorize("hasAnyRole('PATIENT', 'DOCTOR', 'ADMIN')")
+    @PreAuthorize(
+            "hasAnyRole('PATIENT', 'DOCTOR', 'ADMIN')"
+    )
     @PutMapping("/{id}/reschedule")
     public AppointmentResponseDTO rescheduleAppointment(
             @PathVariable Long id,
@@ -184,6 +195,7 @@ public class AppointmentController {
 
     // =========================================================
     // DELETE
+    // ADMIN ONLY
     // =========================================================
 
     @PreAuthorize("hasRole('ADMIN')")
