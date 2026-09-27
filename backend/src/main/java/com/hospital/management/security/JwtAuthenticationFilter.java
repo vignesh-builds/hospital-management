@@ -31,7 +31,6 @@ public class JwtAuthenticationFilter
     @Autowired
     private UserRepository userRepository;
 
-
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
@@ -39,88 +38,72 @@ public class JwtAuthenticationFilter
             FilterChain filterChain)
             throws ServletException, IOException {
 
+        // ==========================================
+        // CORS PREFLIGHT
+        // ==========================================
 
-        // =====================================================
-        // ALLOW CORS PREFLIGHT
-        // =====================================================
-
-        if ("OPTIONS".equalsIgnoreCase(
-                request.getMethod())) {
-
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             filterChain.doFilter(request, response);
             return;
         }
 
-
-        // =====================================================
-        // GET AUTHORIZATION HEADER
-        // =====================================================
+        // ==========================================
+        // AUTHORIZATION HEADER
+        // ==========================================
 
         String authHeader =
                 request.getHeader("Authorization");
 
-
-        // No JWT → continue
-        if (authHeader == null
-                || !authHeader.startsWith("Bearer ")) {
+        if (authHeader == null ||
+                !authHeader.startsWith("Bearer ")) {
 
             filterChain.doFilter(request, response);
             return;
         }
 
-
-        // =====================================================
-        // EXTRACT TOKEN
-        // =====================================================
-
         String token =
                 authHeader.substring(7);
 
-
         try {
 
-            // =================================================
+            // ==========================================
             // VALIDATE JWT
-            // =================================================
+            // ==========================================
 
             Claims claims =
                     Jwts.parser()
-                            .verifyWith(
-                                    jwtService.getSecretKey()
-                            )
+                            .verifyWith(jwtService.getSecretKey())
                             .build()
                             .parseSignedClaims(token)
                             .getPayload();
 
-
             String email =
                     claims.getSubject();
-
 
             String role =
                     claims.get("role", String.class);
 
-
-            // =================================================
+            // ==========================================
             // CHECK USER
-            // =================================================
+            // ==========================================
 
-            if (userRepository
-                    .findByEmail(email)
-                    .isEmpty()) {
+            if (userRepository.findByEmail(email).isEmpty()) {
 
-                filterChain.doFilter(
-                        request,
-                        response
-                );
-
+                filterChain.doFilter(request, response);
                 return;
             }
 
+            // ==========================================
+            // NORMALIZE ROLE
+            // ==========================================
 
-            // =================================================
+            if (role != null && role.startsWith("ROLE_")) {
+                role = role.substring(5);
+            }
+
+            // ==========================================
             // CREATE AUTHENTICATION
-            // =================================================
+            // ==========================================
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
@@ -133,13 +116,21 @@ public class JwtAuthenticationFilter
                             )
                     );
 
-
             SecurityContextHolder
                     .getContext()
-                    .setAuthentication(
-                            authentication
-                    );
+                    .setAuthentication(authentication);
 
+            System.out.println(
+                    "JWT USER = " + email
+            );
+
+            System.out.println(
+                    "JWT ROLE = " + role
+            );
+
+            System.out.println(
+                    "AUTHORITY = ROLE_" + role
+            );
 
         } catch (Exception exception) {
 
@@ -147,13 +138,8 @@ public class JwtAuthenticationFilter
                     "Invalid JWT token: "
                             + exception.getMessage()
             );
-
         }
 
-
-        filterChain.doFilter(
-                request,
-                response
-        );
+        filterChain.doFilter(request, response);
     }
 }
