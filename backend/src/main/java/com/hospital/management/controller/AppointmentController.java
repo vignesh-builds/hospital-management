@@ -12,16 +12,18 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
+
 @RestController
 @RequestMapping("/appointments")
 public class AppointmentController {
+
 
     @Autowired
     private AppointmentService appointmentService;
 
 
     // =========================================================
-    // CREATE APPOINTMENT
+    // CREATE
     // =========================================================
 
     @PreAuthorize("hasAnyRole('PATIENT', 'ADMIN')")
@@ -36,8 +38,7 @@ public class AppointmentController {
 
 
     // =========================================================
-    // GET ALL APPOINTMENTS
-    // ADMIN + DOCTOR
+    // GET ALL
     // =========================================================
 
     @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN')")
@@ -50,7 +51,6 @@ public class AppointmentController {
 
     // =========================================================
     // MY APPOINTMENTS
-    // PATIENT ONLY
     // =========================================================
 
     @PreAuthorize("hasRole('PATIENT')")
@@ -63,7 +63,6 @@ public class AppointmentController {
 
     // =========================================================
     // PATIENT APPOINTMENTS
-    // DOCTOR + ADMIN
     // =========================================================
 
     @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN')")
@@ -78,7 +77,6 @@ public class AppointmentController {
 
     // =========================================================
     // DOCTOR APPOINTMENTS
-    // DOCTOR + ADMIN
     // =========================================================
 
     @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN')")
@@ -91,8 +89,7 @@ public class AppointmentController {
 
 
     // =========================================================
-    // GET APPOINTMENT BY ID
-    // DOCTOR + ADMIN
+    // GET BY ID
     // =========================================================
 
     @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN')")
@@ -107,7 +104,6 @@ public class AppointmentController {
 
     // =========================================================
     // UPDATE
-    // DOCTOR + ADMIN
     // =========================================================
 
     @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN')")
@@ -117,16 +113,12 @@ public class AppointmentController {
             @RequestBody Appointment appointment) {
 
         return appointmentService
-                .updateAppointment(
-                        id,
-                        appointment
-                );
+                .updateAppointment(id, appointment);
     }
 
 
     // =========================================================
     // CONFIRM
-    // DOCTOR ONLY
     // =========================================================
 
     @PreAuthorize("hasRole('DOCTOR')")
@@ -141,7 +133,6 @@ public class AppointmentController {
 
     // =========================================================
     // COMPLETE
-    // DOCTOR ONLY
     // =========================================================
 
     @PreAuthorize("hasRole('DOCTOR')")
@@ -156,7 +147,6 @@ public class AppointmentController {
 
     // =========================================================
     // CANCEL
-    // PATIENT + DOCTOR + ADMIN
     // =========================================================
 
     @PreAuthorize(
@@ -173,7 +163,6 @@ public class AppointmentController {
 
     // =========================================================
     // RESCHEDULE
-    // PATIENT + DOCTOR + ADMIN
     // =========================================================
 
     @PreAuthorize(
@@ -195,7 +184,6 @@ public class AppointmentController {
 
     // =========================================================
     // DELETE
-    // ADMIN ONLY
     // =========================================================
 
     @PreAuthorize("hasRole('ADMIN')")
