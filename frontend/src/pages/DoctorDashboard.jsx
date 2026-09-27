@@ -1,277 +1,303 @@
+import "./patients.css";
 import { useEffect, useState } from "react";
-import { getAuthHeaders, getUser } from "../utils/auth";
-import "./Dashboard.css";
 
-function DoctorDashboard() {
+const API_URL = "https://hospital-backend-jcnb.onrender.com";
 
-  const user = getUser();
+function Patients() {
+  const user = JSON.parse(localStorage.getItem("user"));
+  const token = localStorage.getItem("token");
 
-  const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
+  const [patients, setPatients] = useState([]);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [age, setAge] = useState("");
+  const [editingPatient, setEditingPatient] = useState(null);
 
   useEffect(() => {
-
-    fetchAppointments();
-
+    fetchPatients();
   }, []);
 
-
-  const fetchAppointments = async () => {
-
+  const fetchPatients = async () => {
     try {
-
-      const response = await fetch(
-        "http://localhost:8080/appointments/doctor",
-        {
-          headers: getAuthHeaders(),
-        }
-      );
-
-
-      const text = await response.text();
-
-      let data;
-
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = [];
-      }
-
+      const response = await fetch(`${API_URL}/patients`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (!response.ok) {
-        throw new Error(
-          typeof data === "string"
-            ? data
-            : "Failed to load appointments"
-        );
+        throw new Error("Failed to fetch patients");
       }
 
-
-      setAppointments(data);
-
+      const data = await response.json();
+      setPatients(data);
     } catch (error) {
-
-      setError(error.message);
-
-    } finally {
-
-      setLoading(false);
-
+      console.error("Error:", error);
     }
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  const today =
-    new Date().toISOString().split("T")[0];
+    try {
+      const response = await fetch(`${API_URL}/patients`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          phone,
+          age: Number(age),
+        }),
+      });
 
+      if (!response.ok) {
+        throw new Error("Failed to add patient");
+      }
 
-  const todayAppointments =
-    appointments.filter(
-      (appointment) =>
-        appointment.appointmentDate === today
-    );
+      const data = await response.json();
 
+      setPatients((prev) => [...prev, data]);
 
-  const upcoming =
-    appointments.filter(
-      (appointment) =>
-        appointment.appointmentDate >= today &&
-        appointment.status !== "CANCELLED" &&
-        appointment.status !== "COMPLETED"
-    );
+      setName("");
+      setEmail("");
+      setPhone("");
+      setAge("");
+    } catch (error) {
+      console.error("Error:", error);
+      alert(error.message);
+    }
+  };
 
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this patient?")) {
+      return;
+    }
 
-  const cancelled =
-    appointments.filter(
-      (appointment) =>
-        appointment.status === "CANCELLED"
-    );
+    try {
+      const response = await fetch(`${API_URL}/patients/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
+      if (!response.ok) {
+        throw new Error("Failed to delete patient");
+      }
 
-  const completed =
-    appointments.filter(
-      (appointment) =>
-        appointment.status === "COMPLETED"
-    );
+      setPatients((prev) =>
+        prev.filter((patient) => patient.id !== id)
+      );
+    } catch (error) {
+      console.error("Error:", error);
+      alert(error.message);
+    }
+  };
 
+  const handleEdit = (id) => {
+    const patient = patients.find((patient) => patient.id === id);
+    setEditingPatient({ ...patient });
+  };
 
-  if (loading) {
+  const handleUpdate = async () => {
+    if (!editingPatient) return;
 
-    return (
-      <div className="dashboard-container">
-        <h2>Loading dashboard...</h2>
-      </div>
-    );
+    try {
+      const response = await fetch(
+        `${API_URL}/patients/${editingPatient.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: editingPatient.name,
+            email: editingPatient.email,
+            phone: editingPatient.phone,
+            age: Number(editingPatient.age),
+          }),
+        }
+      );
 
-  }
+      if (!response.ok) {
+        throw new Error("Failed to update patient");
+      }
 
+      const data = await response.json();
+
+      setPatients((prev) =>
+        prev.map((patient) =>
+          patient.id === data.id ? data : patient
+        )
+      );
+
+      setEditingPatient(null);
+    } catch (error) {
+      console.error("Error:", error);
+      alert(error.message);
+    }
+  };
 
   return (
+    <div className="patients-page">
 
-    <div className="dashboard-container">
+      <h1>Patients</h1>
 
-      <div className="dashboard-header">
+      {user?.role === "ADMIN" && (
+        <form onSubmit={handleSubmit}>
 
-        <h1>Doctor Dashboard</h1>
+          <input
+            type="text"
+            placeholder="Patient Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
 
-        <p>
-          Welcome, Dr.{" "}
-          <strong>{user?.name}</strong>
-        </p>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
 
-      </div>
+          <input
+            type="text"
+            placeholder="Phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            required
+          />
 
+          <input
+            type="number"
+            placeholder="Age"
+            value={age}
+            onChange={(e) => setAge(e.target.value)}
+            required
+          />
 
-      {error && (
-        <div className="error-message">
-          {error}
-        </div>
+          <button type="submit">
+            Add Patient
+          </button>
+
+        </form>
       )}
 
+      {patients.length === 0 ? (
+        <p>No patients found.</p>
+      ) : (
+        patients.map((patient) => (
+          <div
+            className="patient-card"
+            key={patient.id}
+          >
 
-      <div className="stats-grid">
+            <h2>{patient.name}</h2>
 
-        <div className="stat-card">
-          <h3>Total Appointments</h3>
-          <p>{appointments.length}</p>
-        </div>
+            <p>
+              <strong>Email:</strong> {patient.email}
+            </p>
 
+            <p>
+              <strong>Phone:</strong> {patient.phone}
+            </p>
 
-        <div className="stat-card">
-          <h3>Today</h3>
-          <p>{todayAppointments.length}</p>
-        </div>
+            <p>
+              <strong>Age:</strong> {patient.age}
+            </p>
 
-
-        <div className="stat-card">
-          <h3>Upcoming</h3>
-          <p>{upcoming.length}</p>
-        </div>
-
-
-        <div className="stat-card">
-          <h3>Completed</h3>
-          <p>{completed.length}</p>
-        </div>
-
-
-        <div className="stat-card">
-          <h3>Cancelled</h3>
-          <p>{cancelled.length}</p>
-        </div>
-
-      </div>
-
-
-      <div className="dashboard-section">
-
-        <h2>Today's Patients</h2>
-
-
-        {todayAppointments.length === 0 ? (
-
-          <p>
-            No appointments today.
-          </p>
-
-        ) : (
-
-          <div className="appointment-list">
-
-            {todayAppointments.map(
-              (appointment) => (
-
-                <div
-                  className="appointment-card"
-                  key={appointment.id}
+            {user?.role === "ADMIN" && (
+              <>
+                <button
+                  onClick={() => handleEdit(patient.id)}
                 >
+                  Edit
+                </button>
 
-                  <h3>
-                    {appointment.patientName}
-                  </h3>
-
-                  <p>
-                    Time:{" "}
-                    {appointment.appointmentTime}
-                  </p>
-
-                  <p>
-                    Status:{" "}
-                    <strong>
-                      {appointment.status}
-                    </strong>
-                  </p>
-
-                </div>
-
-              )
+                <button
+                  onClick={() => handleDelete(patient.id)}
+                >
+                  Delete
+                </button>
+              </>
             )}
 
-          </div>
+            {user?.role === "ADMIN" &&
+              editingPatient?.id === patient.id && (
 
-        )}
+                <div>
 
-      </div>
+                  <input
+                    type="text"
+                    value={editingPatient.name}
+                    onChange={(e) =>
+                      setEditingPatient({
+                        ...editingPatient,
+                        name: e.target.value,
+                      })
+                    }
+                  />
 
+                  <input
+                    type="email"
+                    value={editingPatient.email}
+                    onChange={(e) =>
+                      setEditingPatient({
+                        ...editingPatient,
+                        email: e.target.value,
+                      })
+                    }
+                  />
 
-      <div className="dashboard-section">
+                  <input
+                    type="text"
+                    value={editingPatient.phone}
+                    onChange={(e) =>
+                      setEditingPatient({
+                        ...editingPatient,
+                        phone: e.target.value,
+                      })
+                    }
+                  />
 
-        <h2>Upcoming Appointments</h2>
+                  <input
+                    type="number"
+                    value={editingPatient.age}
+                    onChange={(e) =>
+                      setEditingPatient({
+                        ...editingPatient,
+                        age: e.target.value,
+                      })
+                    }
+                  />
 
+                  <button onClick={handleUpdate}>
+                    Update Patient
+                  </button>
 
-        {upcoming.length === 0 ? (
-
-          <p>
-            No upcoming appointments.
-          </p>
-
-        ) : (
-
-          <div className="appointment-list">
-
-            {upcoming.slice(0, 5).map(
-              (appointment) => (
-
-                <div
-                  className="appointment-card"
-                  key={appointment.id}
-                >
-
-                  <h3>
-                    {appointment.patientName}
-                  </h3>
-
-                  <p>
-                    Date:{" "}
-                    {appointment.appointmentDate}
-                  </p>
-
-                  <p>
-                    Time:{" "}
-                    {appointment.appointmentTime}
-                  </p>
-
-                  <p>
-                    Status:{" "}
-                    {appointment.status}
-                  </p>
+                  <button
+                    onClick={() => setEditingPatient(null)}
+                  >
+                    Cancel
+                  </button>
 
                 </div>
-
-              )
-            )}
+              )}
 
           </div>
-
-        )}
-
-      </div>
+        ))
+      )}
 
     </div>
   );
 }
 
-export default DoctorDashboard;
+export default Patients;
