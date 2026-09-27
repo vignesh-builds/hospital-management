@@ -1,6 +1,8 @@
 import "./Appointments.css";
 import { useEffect, useState } from "react";
 
+const API_URL = "https://hospital-backend-jcnb.onrender.com";
+
 function Appointments() {
   const user = JSON.parse(localStorage.getItem("user"));
 
@@ -23,20 +25,24 @@ function Appointments() {
   const [filterDate, setFilterDate] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
 
-  // Patient history tab
   const [historyType, setHistoryType] = useState("ALL");
+
+  const token = localStorage.getItem("token");
 
   // =========================
   // GET DATA
   // =========================
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    if (!user || !token) {
+      setError("Please login first.");
+      return;
+    }
 
     const appointmentUrl =
       user.role === "PATIENT"
-        ? "http://localhost:8080/appointments/my"
-        : "http://localhost:8080/appointments";
+        ? `${API_URL}/appointments/my`
+        : `${API_URL}/appointments`;
 
     fetch(appointmentUrl, {
       headers: {
@@ -44,49 +50,77 @@ function Appointments() {
       },
     })
       .then(async (response) => {
+        const text = await response.text();
+
         if (!response.ok) {
-          const message = await response.text();
           throw new Error(
-            message || "Failed to fetch appointments"
+            text || "Failed to fetch appointments"
           );
         }
 
-        return response.json();
+        return text ? JSON.parse(text) : [];
       })
       .then((data) => {
-        setAppointments(data);
+        setAppointments(Array.isArray(data) ? data : []);
       })
       .catch((error) => {
+        console.error("Appointment Error:", error);
         setError(error.message);
       });
 
-    fetch("http://localhost:8080/doctors", {
+    // Doctors
+    fetch(`${API_URL}/doctors`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     })
-      .then((response) => response.json())
-      .then((data) => setDoctors(data))
-      .catch((error) =>
-        console.log("Doctor Error:", error)
-      );
+      .then(async (response) => {
+        const text = await response.text();
 
+        if (!response.ok) {
+          throw new Error(
+            text || "Failed to fetch doctors"
+          );
+        }
+
+        return text ? JSON.parse(text) : [];
+      })
+      .then((data) => {
+        setDoctors(Array.isArray(data) ? data : []);
+      })
+      .catch((error) => {
+        console.error("Doctor Error:", error);
+      });
+
+    // Patients
     if (
       user.role === "PATIENT" ||
       user.role === "ADMIN"
     ) {
-      fetch("http://localhost:8080/patients", {
+      fetch(`${API_URL}/patients`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       })
-        .then((response) => response.json())
-        .then((data) => setPatients(data))
-        .catch((error) =>
-          console.log("Patient Error:", error)
-        );
+        .then(async (response) => {
+          const text = await response.text();
+
+          if (!response.ok) {
+            throw new Error(
+              text || "Failed to fetch patients"
+            );
+          }
+
+          return text ? JSON.parse(text) : [];
+        })
+        .then((data) => {
+          setPatients(Array.isArray(data) ? data : []);
+        })
+        .catch((error) => {
+          console.error("Patient Error:", error);
+        });
     }
-  }, [user.role]);
+  }, [user?.role, token]);
 
   // =========================
   // AVAILABLE SLOTS
@@ -99,15 +133,13 @@ function Appointments() {
       return;
     }
 
-    const token = localStorage.getItem("token");
-
     setSlotLoading(true);
     setAvailableSlots([]);
     setAppointmentTime("");
     setError("");
 
     fetch(
-      `http://localhost:8080/availability/doctor/${doctorId}/date/${appointmentDate}/slots`,
+      `${API_URL}/availability/doctor/${doctorId}/date/${appointmentDate}/slots`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -115,25 +147,29 @@ function Appointments() {
       }
     )
       .then(async (response) => {
+        const text = await response.text();
+
         if (!response.ok) {
-          const message = await response.text();
           throw new Error(
-            message || "Failed to fetch available slots"
+            text || "Failed to fetch available slots"
           );
         }
 
-        return response.json();
+        return text ? JSON.parse(text) : [];
       })
       .then((data) => {
-        setAvailableSlots(data);
+        setAvailableSlots(
+          Array.isArray(data) ? data : []
+        );
       })
       .catch((error) => {
+        console.error("Slot Error:", error);
         setError(error.message);
       })
       .finally(() => {
         setSlotLoading(false);
       });
-  }, [appointmentDate, doctorId]);
+  }, [appointmentDate, doctorId, token]);
 
   // =========================
   // BOOK APPOINTMENT
@@ -144,12 +180,25 @@ function Appointments() {
 
     setError("");
 
+    if (!appointmentDate) {
+      setError("Please select appointment date");
+      return;
+    }
+
+    if (!doctorId) {
+      setError("Please select doctor");
+      return;
+    }
+
     if (!appointmentTime) {
       setError("Please select an available time slot");
       return;
     }
 
-    const token = localStorage.getItem("token");
+    if (user.role === "ADMIN" && !patientId) {
+      setError("Please select patient");
+      return;
+    }
 
     const appointmentData = {
       appointmentDate,
@@ -165,7 +214,7 @@ function Appointments() {
       };
     }
 
-    fetch("http://localhost:8080/appointments", {
+    fetch(`${API_URL}/appointments`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -174,27 +223,29 @@ function Appointments() {
       body: JSON.stringify(appointmentData),
     })
       .then(async (response) => {
-        const data = await response.text();
+        const text = await response.text();
 
         if (!response.ok) {
-          throw new Error(data);
+          throw new Error(
+            text || "Failed to book appointment"
+          );
         }
 
-        return JSON.parse(data);
+        return text ? JSON.parse(text) : {};
       })
       .then((data) => {
-        setAppointments((prev) => [
-          ...prev,
-          data,
-        ]);
+        setAppointments((prev) => [...prev, data]);
 
         setAppointmentDate("");
         setAppointmentTime("");
         setPatientId("");
         setDoctorId("");
         setAvailableSlots([]);
+
+        alert("Appointment booked successfully!");
       })
       .catch((error) => {
+        console.error("Booking Error:", error);
         setError(error.message);
       });
   };
@@ -212,20 +263,19 @@ function Appointments() {
       return;
     }
 
-    const token = localStorage.getItem("token");
-
-    fetch(
-      `http://localhost:8080/appointments/${id}`,
-      {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    )
+    fetch(`${API_URL}/appointments/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
       .then(async (response) => {
+        const text = await response.text();
+
         if (!response.ok) {
-          throw new Error(await response.text());
+          throw new Error(
+            text || "Failed to delete appointment"
+          );
         }
       })
       .then(() => {
@@ -237,6 +287,7 @@ function Appointments() {
         );
       })
       .catch((error) => {
+        console.error("Delete Error:", error);
         setError(error.message);
       });
   };
@@ -250,7 +301,19 @@ function Appointments() {
       (item) => item.id === id
     );
 
-    setEditingAppointment(appointment);
+    if (!appointment) return;
+
+    setEditingAppointment({
+      ...appointment,
+      patientId:
+        appointment.patientId ||
+        appointment.patient?.id ||
+        "",
+      doctorId:
+        appointment.doctorId ||
+        appointment.doctor?.id ||
+        "",
+    });
   };
 
   // =========================
@@ -258,46 +321,49 @@ function Appointments() {
   // =========================
 
   const handleUpdate = () => {
+    if (!editingAppointment) return;
+
     setError("");
 
-    const token = localStorage.getItem("token");
+    const updateData = {
+      appointmentDate:
+        editingAppointment.appointmentDate,
+
+      appointmentTime:
+        editingAppointment.appointmentTime,
+
+      status: editingAppointment.status,
+
+      patient: {
+        id: Number(editingAppointment.patientId),
+      },
+
+      doctor: {
+        id: Number(editingAppointment.doctorId),
+      },
+    };
 
     fetch(
-      `http://localhost:8080/appointments/${editingAppointment.id}`,
+      `${API_URL}/appointments/${editingAppointment.id}`,
       {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          appointmentDate:
-            editingAppointment.appointmentDate,
-
-          appointmentTime:
-            editingAppointment.appointmentTime,
-
-          status:
-            editingAppointment.status,
-
-          patient: {
-            id: editingAppointment.patientId,
-          },
-
-          doctor: {
-            id: editingAppointment.doctorId,
-          },
-        }),
+        body: JSON.stringify(updateData),
       }
     )
       .then(async (response) => {
-        const data = await response.text();
+        const text = await response.text();
 
         if (!response.ok) {
-          throw new Error(data);
+          throw new Error(
+            text || "Failed to update appointment"
+          );
         }
 
-        return JSON.parse(data);
+        return text ? JSON.parse(text) : {};
       })
       .then((data) => {
         setAppointments((prev) =>
@@ -311,6 +377,7 @@ function Appointments() {
         setEditingAppointment(null);
       })
       .catch((error) => {
+        console.error("Update Error:", error);
         setError(error.message);
       });
   };
@@ -330,10 +397,8 @@ function Appointments() {
 
     setError("");
 
-    const token = localStorage.getItem("token");
-
     fetch(
-      `http://localhost:8080/appointments/${id}/cancel`,
+      `${API_URL}/appointments/${id}/cancel`,
       {
         method: "PUT",
         headers: {
@@ -342,13 +407,15 @@ function Appointments() {
       }
     )
       .then(async (response) => {
-        const data = await response.text();
+        const text = await response.text();
 
         if (!response.ok) {
-          throw new Error(data);
+          throw new Error(
+            text || "Failed to cancel appointment"
+          );
         }
 
-        return JSON.parse(data);
+        return text ? JSON.parse(text) : {};
       })
       .then((data) => {
         setAppointments((prev) =>
@@ -360,12 +427,13 @@ function Appointments() {
         );
       })
       .catch((error) => {
+        console.error("Cancel Error:", error);
         setError(error.message);
       });
   };
 
   // =========================
-  // CLEAR FILTERS
+  // FILTER
   // =========================
 
   const clearFilters = () => {
@@ -374,17 +442,12 @@ function Appointments() {
     setFilterStatus("");
   };
 
-  // =========================
-  // FILTER
-  // =========================
-
   const filteredAppointments =
     appointments.filter((appointment) => {
-
-      const search =
-        searchText.toLowerCase();
+      const search = searchText.toLowerCase();
 
       const matchesSearch =
+        !search ||
         appointment.doctorName
           ?.toLowerCase()
           .includes(search) ||
@@ -397,13 +460,11 @@ function Appointments() {
 
       const matchesDate =
         !filterDate ||
-        appointment.appointmentDate ===
-          filterDate;
+        appointment.appointmentDate === filterDate;
 
       const matchesStatus =
         !filterStatus ||
-        appointment.status ===
-          filterStatus;
+        appointment.status === filterStatus;
 
       return (
         matchesSearch &&
@@ -413,7 +474,7 @@ function Appointments() {
     });
 
   // =========================
-  // PATIENT HISTORY FILTER
+  // PATIENT HISTORY
   // =========================
 
   const today = new Date()
@@ -423,37 +484,45 @@ function Appointments() {
   const historyAppointments =
     filteredAppointments.filter(
       (appointment) => {
-
         if (user.role !== "PATIENT") {
           return true;
         }
 
         if (historyType === "UPCOMING") {
           return (
-            appointment.appointmentDate >=
-              today &&
-            appointment.status !==
-              "CANCELLED"
+            appointment.appointmentDate >= today &&
+            appointment.status !== "CANCELLED" &&
+            appointment.status !== "COMPLETED"
           );
         }
 
         if (historyType === "PAST") {
           return (
-            appointment.appointmentDate <
-            today
+            appointment.appointmentDate < today ||
+            appointment.status === "COMPLETED"
           );
         }
 
         if (historyType === "CANCELLED") {
           return (
-            appointment.status ===
-            "CANCELLED"
+            appointment.status === "CANCELLED"
           );
         }
 
         return true;
       }
     );
+
+  if (!user) {
+    return (
+      <div className="appointments-page">
+        <h1>Appointments</h1>
+        <p className="error-message">
+          Please login first.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="appointments-page">
@@ -480,9 +549,7 @@ function Appointments() {
             value={appointmentDate}
             min={today}
             onChange={(e) => {
-              setAppointmentDate(
-                e.target.value
-              );
+              setAppointmentDate(e.target.value);
               setAppointmentTime("");
             }}
             required
@@ -492,9 +559,7 @@ function Appointments() {
             <select
               value={patientId}
               onChange={(e) =>
-                setPatientId(
-                  e.target.value
-                )
+                setPatientId(e.target.value)
               }
               required
             >
@@ -516,9 +581,7 @@ function Appointments() {
           <select
             value={doctorId}
             onChange={(e) => {
-              setDoctorId(
-                e.target.value
-              );
+              setDoctorId(e.target.value);
               setAppointmentTime("");
             }}
             required
@@ -538,67 +601,65 @@ function Appointments() {
             ))}
           </select>
 
-          {/* AVAILABLE SLOTS */}
+          {appointmentDate && doctorId && (
+            <div className="available-slots">
 
-          {appointmentDate &&
-            doctorId && (
+              <h3>
+                Available Time Slots
+              </h3>
 
-              <div className="available-slots">
+              {slotLoading && (
+                <p>
+                  Loading available slots...
+                </p>
+              )}
 
-                <h3>
-                  Available Time Slots
-                </h3>
-
-                {slotLoading && (
+              {!slotLoading &&
+                availableSlots.length === 0 && (
                   <p>
-                    Loading available slots...
+                    No available slots for this date.
                   </p>
                 )}
 
-                {!slotLoading &&
-                  availableSlots.length ===
-                    0 && (
-                    <p>
-                      No available slots
-                      for this date.
-                    </p>
-                  )}
+              {!slotLoading &&
+                availableSlots.length > 0 && (
+                  <div className="slot-container">
 
-                {!slotLoading &&
-                  availableSlots.length >
-                    0 && (
+                    {availableSlots.map((slot) => (
+                      <button
+                        type="button"
+                        key={
+                          typeof slot === "string"
+                            ? slot
+                            : slot.time
+                        }
+                        className={
+                          appointmentTime ===
+                          (typeof slot === "string"
+                            ? slot
+                            : slot.time)
+                            ? "slot-btn selected"
+                            : "slot-btn"
+                        }
+                        onClick={() =>
+                          setAppointmentTime(
+                            typeof slot === "string"
+                              ? slot
+                              : slot.time
+                          )
+                        }
+                      >
+                        {typeof slot === "string"
+                          ? slot
+                          : slot.time}
+                      </button>
+                    ))}
 
-                    <div className="slot-container">
+                  </div>
+                )}
 
-                      {availableSlots.map(
-                        (slot) => (
-
-                          <button
-                            type="button"
-                            key={slot.time}
-                            className={
-                              appointmentTime ===
-                              slot.time
-                                ? "slot-btn selected"
-                                : "slot-btn"
-                            }
-                            onClick={() =>
-                              setAppointmentTime(
-                                slot.time
-                              )
-                            }
-                          >
-                            {slot.time}
-                          </button>
-
-                        )
-                      )}
-
-                    </div>
-                  )}
-
-              </div>
-            )}
+            </div>
+          )}
 
           {appointmentTime && (
             <p>
@@ -624,7 +685,6 @@ function Appointments() {
       ========================= */}
 
       {user.role === "PATIENT" && (
-
         <div className="history-section">
 
           <h2>
@@ -633,57 +693,27 @@ function Appointments() {
 
           <div className="history-tabs">
 
-            <button
-              className={
-                historyType === "ALL"
-                  ? "history-tab active"
-                  : "history-tab"
-              }
-              onClick={() =>
-                setHistoryType("ALL")
-              }
-            >
-              All
-            </button>
-
-            <button
-              className={
-                historyType === "UPCOMING"
-                  ? "history-tab active"
-                  : "history-tab"
-              }
-              onClick={() =>
-                setHistoryType("UPCOMING")
-              }
-            >
-              Upcoming
-            </button>
-
-            <button
-              className={
-                historyType === "PAST"
-                  ? "history-tab active"
-                  : "history-tab"
-              }
-              onClick={() =>
-                setHistoryType("PAST")
-              }
-            >
-              Past
-            </button>
-
-            <button
-              className={
-                historyType === "CANCELLED"
-                  ? "history-tab active"
-                  : "history-tab"
-              }
-              onClick={() =>
-                setHistoryType("CANCELLED")
-              }
-            >
-              Cancelled
-            </button>
+            {[
+              ["ALL", "All"],
+              ["UPCOMING", "Upcoming"],
+              ["PAST", "Past"],
+              ["CANCELLED", "Cancelled"],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                className={
+                  historyType === value
+                    ? "history-tab active"
+                    : "history-tab"
+                }
+                onClick={() =>
+                  setHistoryType(value)
+                }
+              >
+                {label}
+              </button>
+            ))}
 
           </div>
 
@@ -707,9 +737,7 @@ function Appointments() {
             placeholder="Search doctor, patient..."
             value={searchText}
             onChange={(e) =>
-              setSearchText(
-                e.target.value
-              )
+              setSearchText(e.target.value)
             }
           />
 
@@ -717,18 +745,14 @@ function Appointments() {
             type="date"
             value={filterDate}
             onChange={(e) =>
-              setFilterDate(
-                e.target.value
-              )
+              setFilterDate(e.target.value)
             }
           />
 
           <select
             value={filterStatus}
             onChange={(e) =>
-              setFilterStatus(
-                e.target.value
-              )
+              setFilterStatus(e.target.value)
             }
           >
             <option value="">
@@ -776,8 +800,7 @@ function Appointments() {
           APPOINTMENT LIST
       ========================= */}
 
-      {historyAppointments.length ===
-      0 ? (
+      {historyAppointments.length === 0 ? (
 
         <div className="no-appointments">
           <p>
@@ -796,8 +819,7 @@ function Appointments() {
             >
 
               <h2>
-                Appointment #
-                {appointment.id}
+                Appointment #{appointment.id}
               </h2>
 
               <p>
@@ -814,7 +836,9 @@ function Appointments() {
                 <strong>Status:</strong>{" "}
 
                 <span
-                  className={`status ${appointment.status.toLowerCase()}`}
+                  className={`status ${
+                    appointment.status?.toLowerCase() || ""
+                  }`}
                 >
                   {appointment.status}
                 </span>
@@ -841,13 +865,11 @@ function Appointments() {
 
               {(user.role === "DOCTOR" ||
                 user.role === "ADMIN") && (
-
                 <button
+                  type="button"
                   className="edit-btn"
                   onClick={() =>
-                    handleEdit(
-                      appointment.id
-                    )
+                    handleEdit(appointment.id)
                   }
                 >
                   Edit
@@ -867,8 +889,7 @@ function Appointments() {
                     <input
                       type="date"
                       value={
-                        editingAppointment
-                          .appointmentDate
+                        editingAppointment.appointmentDate
                       }
                       onChange={(e) =>
                         setEditingAppointment({
@@ -883,8 +904,7 @@ function Appointments() {
                     <input
                       type="time"
                       value={
-                        editingAppointment
-                          .appointmentTime
+                        editingAppointment.appointmentTime
                       }
                       onChange={(e) =>
                         setEditingAppointment({
@@ -896,83 +916,65 @@ function Appointments() {
                       required
                     />
 
-                    {user.role ===
-                      "ADMIN" && (
+                    {user.role === "ADMIN" && (
+                      <>
+                        <select
+                          value={
+                            editingAppointment.patientId
+                          }
+                          onChange={(e) =>
+                            setEditingAppointment({
+                              ...editingAppointment,
+                              patientId:
+                                Number(
+                                  e.target.value
+                                ),
+                            })
+                          }
+                          required
+                        >
+                          {patients.map(
+                            (patient) => (
+                              <option
+                                key={patient.id}
+                                value={patient.id}
+                              >
+                                {patient.name}
+                              </option>
+                            )
+                          )}
+                        </select>
 
-                      <select
-                        value={
-                          editingAppointment
-                            .patientId
-                        }
-                        onChange={(e) =>
-                          setEditingAppointment({
-                            ...editingAppointment,
-                            patientId:
-                              Number(
-                                e.target.value
-                              ),
-                          })
-                        }
-                        required
-                      >
-                        {patients.map(
-                          (patient) => (
-
-                            <option
-                              key={
-                                patient.id
-                              }
-                              value={
-                                patient.id
-                              }
-                            >
-                              {patient.name}
-                            </option>
-
-                          )
-                        )}
-                      </select>
-                    )}
-
-                    {user.role ===
-                      "ADMIN" && (
-
-                      <select
-                        value={
-                          editingAppointment
-                            .doctorId
-                        }
-                        onChange={(e) =>
-                          setEditingAppointment({
-                            ...editingAppointment,
-                            doctorId:
-                              Number(
-                                e.target.value
-                              ),
-                          })
-                        }
-                        required
-                      >
-                        {doctors.map(
-                          (doctor) => (
-
-                            <option
-                              key={
-                                doctor.id
-                              }
-                              value={
-                                doctor.id
-                              }
-                            >
-                              {doctor.name} -{" "}
-                              {
-                                doctor.specialization
-                              }
-                            </option>
-
-                          )
-                        )}
-                      </select>
+                        <select
+                          value={
+                            editingAppointment.doctorId
+                          }
+                          onChange={(e) =>
+                            setEditingAppointment({
+                              ...editingAppointment,
+                              doctorId:
+                                Number(
+                                  e.target.value
+                                ),
+                            })
+                          }
+                          required
+                        >
+                          {doctors.map(
+                            (doctor) => (
+                              <option
+                                key={doctor.id}
+                                value={doctor.id}
+                              >
+                                {doctor.name} -{" "}
+                                {
+                                  doctor.specialization
+                                }
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </>
                     )}
 
                     <select
@@ -982,8 +984,7 @@ function Appointments() {
                       onChange={(e) =>
                         setEditingAppointment({
                           ...editingAppointment,
-                          status:
-                            e.target.value,
+                          status: e.target.value,
                         })
                       }
                     >
@@ -1006,11 +1007,18 @@ function Appointments() {
 
                     <button
                       type="button"
-                      onClick={
-                        handleUpdate
-                      }
+                      onClick={handleUpdate}
                     >
                       Update Appointment
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEditingAppointment(null)
+                      }
+                    >
+                      Close
                     </button>
 
                   </form>
@@ -1018,17 +1026,15 @@ function Appointments() {
 
               {/* CANCEL */}
 
-              {appointment.status !==
-                "CANCELLED" &&
+              {appointment.status !== "CANCELLED" &&
                 (user.role === "DOCTOR" ||
                   user.role === "ADMIN") && (
 
                   <button
+                    type="button"
                     className="cancel-btn"
                     onClick={() =>
-                      handleCancel(
-                        appointment.id
-                      )
+                      handleCancel(appointment.id)
                     }
                   >
                     Cancel
@@ -1038,13 +1044,11 @@ function Appointments() {
               {/* DELETE */}
 
               {user.role === "ADMIN" && (
-
                 <button
+                  type="button"
                   className="delete-btn"
                   onClick={() =>
-                    handleDelete(
-                      appointment.id
-                    )
+                    handleDelete(appointment.id)
                   }
                 >
                   Delete
