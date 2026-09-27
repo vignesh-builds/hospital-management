@@ -4,18 +4,14 @@ import java.util.List;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-
 import org.springframework.security.config.http.SessionCreationPolicy;
-
 import org.springframework.security.web.SecurityFilterChain;
-
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
 
 @Configuration
 @EnableMethodSecurity
@@ -27,60 +23,46 @@ public class SecurityConfig {
     ) throws Exception {
 
         http
+                .cors(cors ->
+                        cors.configurationSource(corsConfigurationSource())
+                )
 
-            // ==============================
-            // CORS
-            // ==============================
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
 
-            // ==============================
-            // CSRF
-            // ==============================
-            .csrf(csrf -> csrf.disable())
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
+                )
 
-            // ==============================
-            // SESSION
-            // ==============================
-            .sessionManagement(session ->
-                    session.sessionCreationPolicy(
-                            SessionCreationPolicy.STATELESS
-                    )
-            )
+                .authorizeHttpRequests(auth -> auth
 
-            // ==============================
-            // AUTHORIZATION
-            // ==============================
-            .authorizeHttpRequests(auth -> auth
+                        // Login / Register
+                        .requestMatchers("/auth/**")
+                        .permitAll()
 
-                    // Authentication APIs
-                    .requestMatchers(
-                            "/auth/**"
-                    ).permitAll()
+                        // CORS preflight
+                        .requestMatchers(
+                                HttpMethod.OPTIONS,
+                                "/**"
+                        )
+                        .permitAll()
 
-                    // OPTIONS preflight request
-                    .requestMatchers(
-                            org.springframework.http.HttpMethod.OPTIONS,
-                            "/**"
-                    ).permitAll()
+                        // Public APIs
+                        .requestMatchers(
+                                "/",
+                                "/health",
+                                "/api/**"
+                        )
+                        .permitAll()
 
-                    // Public health/test API
-                    .requestMatchers(
-                            "/",
-                            "/health",
-                            "/api/**"
-                    ).permitAll()
-
-                    // Everything else requires login
-                    .anyRequest().authenticated()
-            );
+                        // Everything else requires JWT
+                        .anyRequest()
+                        .authenticated()
+                );
 
         return http.build();
     }
-
-
-    // ==========================================================
-    // CORS CONFIGURATION
-    // ==========================================================
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -88,23 +70,13 @@ public class SecurityConfig {
         CorsConfiguration configuration =
                 new CorsConfiguration();
 
-        // ------------------------------------------------------
-        // FRONTEND URLS
-        // ------------------------------------------------------
-
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:5173",
                 "http://localhost:3000",
 
-                // IMPORTANT:
-                // Replace this with your actual Render frontend URL
+                // Your Render frontend
                 "https://hospital-frontend-7jfj.onrender.com"
         ));
-
-
-        // ------------------------------------------------------
-        // ALLOWED METHODS
-        // ------------------------------------------------------
 
         configuration.setAllowedMethods(List.of(
                 "GET",
@@ -115,11 +87,6 @@ public class SecurityConfig {
                 "OPTIONS"
         ));
 
-
-        // ------------------------------------------------------
-        // ALLOWED HEADERS
-        // ------------------------------------------------------
-
         configuration.setAllowedHeaders(List.of(
                 "Authorization",
                 "Content-Type",
@@ -128,26 +95,11 @@ public class SecurityConfig {
                 "X-Requested-With"
         ));
 
-
-        // ------------------------------------------------------
-        // CREDENTIALS
-        // ------------------------------------------------------
-
         configuration.setAllowCredentials(true);
-
-
-        // ------------------------------------------------------
-        // EXPOSE HEADERS
-        // ------------------------------------------------------
 
         configuration.setExposedHeaders(List.of(
                 "Authorization"
         ));
-
-
-        // ------------------------------------------------------
-        // REGISTER CORS CONFIGURATION
-        // ------------------------------------------------------
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
@@ -156,7 +108,6 @@ public class SecurityConfig {
                 "/**",
                 configuration
         );
-
 
         return source;
     }
