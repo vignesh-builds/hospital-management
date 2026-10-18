@@ -1,3 +1,4 @@
+
 package com.hospital.management.config;
 
 import com.hospital.management.security.JwtAuthenticationFilter;
@@ -11,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -30,44 +33,55 @@ public class SecurityConfig {
     @Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http)
-            throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http) throws Exception {
 
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .cors(cors -> cors.configurationSource(
+                        corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS))
 
-                // Not logged in / expired token -> 401 (frontend redirects to login)
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint(
-                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+                                new HttpStatusEntryPoint(
+                                        HttpStatus.UNAUTHORIZED)))
 
                 .authorizeHttpRequests(auth -> auth
 
                         // CORS preflight
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(
+                                HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Login / register
-                        .requestMatchers("/auth/login", "/auth/register").permitAll()
+                        // Login and registration
+                        .requestMatchers(
+                                "/auth/login",
+                                "/auth/register").permitAll()
 
-                        // Health + error pages
-                        .requestMatchers("/", "/health", "/error").permitAll()
+                        // Health and error pages
+                        .requestMatchers(
+                                "/", "/health", "/error").permitAll()
 
-                        // Logged-in doctor profile (must be before /doctors/{id})
-                        .requestMatchers(HttpMethod.GET, "/doctors/me").authenticated()
+                        // Logged-in doctor profile
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/doctors/me").authenticated()
 
                         // Public doctor list
-                        .requestMatchers(HttpMethod.GET, "/doctors", "/doctors/{id}")
-                        .permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/doctors",
+                                "/doctors/{id}").permitAll()
 
-                        // Everything else needs a valid token
+                        // Other requests require authentication
                         .anyRequest().authenticated()
                 )
 
@@ -80,41 +94,69 @@ public class SecurityConfig {
     }
 
     /**
-     * The JWT filter is a Spring bean, so Spring Boot would also register it
-     * as a normal servlet filter. It must only run inside the security chain.
+     * Password encoder used to hash passwords before
+     * storing them in the database.
      */
     @Bean
-    public FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterRegistration(
-            JwtAuthenticationFilter filter) {
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    /**
+     * Prevent Spring Boot from registering the JWT filter
+     * as a separate servlet filter.
+     */
+    @Bean
+    public FilterRegistrationBean<JwtAuthenticationFilter>
+    jwtFilterRegistration(JwtAuthenticationFilter filter) {
 
         FilterRegistrationBean<JwtAuthenticationFilter> registration =
                 new FilterRegistrationBean<>(filter);
+
         registration.setEnabled(false);
+
         return registration;
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
-        CorsConfiguration configuration = new CorsConfiguration();
+        CorsConfiguration configuration =
+                new CorsConfiguration();
 
-        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+        List<String> origins = Arrays.stream(
+                        allowedOrigins.split(","))
                 .map(String::trim)
                 .filter(origin -> !origin.isEmpty())
                 .toList();
 
         configuration.setAllowedOrigins(origins);
+
         configuration.setAllowedMethods(
-                List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+                List.of(
+                        "GET", "POST", "PUT",
+                        "DELETE", "PATCH", "OPTIONS"
+                ));
+
         configuration.setAllowedHeaders(
-                List.of("Authorization", "Content-Type", "Accept", "Origin",
-                        "X-Requested-With"));
+                List.of(
+                        "Authorization",
+                        "Content-Type",
+                        "Accept",
+                        "Origin",
+                        "X-Requested-With"
+                ));
+
         configuration.setAllowCredentials(true);
-        configuration.setExposedHeaders(List.of("Authorization"));
+
+        configuration.setExposedHeaders(
+                List.of("Authorization"));
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
+
         source.registerCorsConfiguration("/**", configuration);
+
         return source;
     }
 }
