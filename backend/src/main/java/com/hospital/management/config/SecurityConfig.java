@@ -12,8 +12,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -49,42 +47,32 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
                                 SessionCreationPolicy.STATELESS))
-
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint(
                                 new HttpStatusEntryPoint(
                                         HttpStatus.UNAUTHORIZED)))
-
                 .authorizeHttpRequests(auth -> auth
-
-                        // CORS preflight
                         .requestMatchers(
                                 HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Login and registration
                         .requestMatchers(
                                 "/auth/login",
                                 "/auth/register").permitAll()
 
-                        // Health and error pages
                         .requestMatchers(
                                 "/", "/health", "/error").permitAll()
 
-                        // Logged-in doctor profile
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/doctors/me").authenticated()
 
-                        // Public doctor list
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/doctors",
                                 "/doctors/{id}").permitAll()
 
-                        // Other requests require authentication
                         .anyRequest().authenticated()
                 )
-
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
@@ -93,19 +81,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /**
-     * Password encoder used to hash passwords before
-     * storing them in the database.
-     */
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    /**
-     * Prevent Spring Boot from registering the JWT filter
-     * as a separate servlet filter.
-     */
+    // Prevent duplicate servlet-filter registration for JWT.
     @Bean
     public FilterRegistrationBean<JwtAuthenticationFilter>
     jwtFilterRegistration(JwtAuthenticationFilter filter) {
@@ -114,15 +90,13 @@ public class SecurityConfig {
                 new FilterRegistrationBean<>(filter);
 
         registration.setEnabled(false);
-
         return registration;
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
-        CorsConfiguration configuration =
-                new CorsConfiguration();
+        CorsConfiguration configuration = new CorsConfiguration();
 
         List<String> origins = Arrays.stream(
                         allowedOrigins.split(","))
@@ -134,8 +108,12 @@ public class SecurityConfig {
 
         configuration.setAllowedMethods(
                 List.of(
-                        "GET", "POST", "PUT",
-                        "DELETE", "PATCH", "OPTIONS"
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "DELETE",
+                        "PATCH",
+                        "OPTIONS"
                 ));
 
         configuration.setAllowedHeaders(
@@ -148,9 +126,7 @@ public class SecurityConfig {
                 ));
 
         configuration.setAllowCredentials(true);
-
-        configuration.setExposedHeaders(
-                List.of("Authorization"));
+        configuration.setExposedHeaders(List.of("Authorization"));
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
