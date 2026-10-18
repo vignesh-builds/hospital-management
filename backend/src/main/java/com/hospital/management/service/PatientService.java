@@ -1,6 +1,7 @@
 
 package com.hospital.management.service;
 
+import com.hospital.management.dto.PatientCreationResponse;
 import com.hospital.management.exception.BadRequestException;
 import com.hospital.management.exception.ResourceNotFoundException;
 import com.hospital.management.model.Patient;
@@ -40,36 +41,27 @@ public class PatientService {
             + "23456789@#$%";
 
     @Transactional
-    public Patient createPatient(Patient patient) {
+    public PatientCreationResponse createPatient(Patient patient) {
 
         validate(patient);
 
-        String email = patient.getEmail();
-
-        if (email == null || email.isBlank()) {
+        if (patient.getEmail() == null
+                || patient.getEmail().isBlank()) {
             throw new BadRequestException(
                     "Patient email is required to create a login account");
         }
 
-        email = email.trim();
+        String email = patient.getEmail().trim();
 
         if (userRepository.findByEmailIgnoreCase(email).isPresent()) {
             throw new BadRequestException(
                     "An account with this email already exists");
         }
 
-        if (patientRepository.findAll().stream()
-                .anyMatch(existing ->
-                        existing.getEmail() != null
-                                && existing.getEmail().equalsIgnoreCase(email))) {
-            throw new BadRequestException(
-                    "A patient with this email already exists");
-        }
-
-        // Generate a temporary password
+        // Generate a secure temporary password.
         String temporaryPassword = generateTemporaryPassword();
 
-        // Create the patient's login account
+        // Create a new patient login account.
         User user = new User();
         user.setName(patient.getName().trim());
         user.setEmail(email);
@@ -79,7 +71,7 @@ public class PatientService {
 
         User savedUser = userRepository.save(user);
 
-        // Link the patient record to the login account
+        // Link the patient record to the login account.
         patient.setId(null);
         patient.setName(patient.getName().trim());
         patient.setEmail(email);
@@ -87,14 +79,14 @@ public class PatientService {
 
         Patient savedPatient = patientRepository.save(patient);
 
-        /*
-         * The temporary password is intentionally NOT returned
-         * from this method or saved as plain text.
-         * The controller must use a dedicated one-time response
-         * to securely deliver it to the authorized admin.
-         */
-
-        return savedPatient;
+        // Return the temporary password only in this creation response.
+        return new PatientCreationResponse(
+                savedPatient.getId(),
+                savedPatient.getName(),
+                savedPatient.getEmail(),
+                temporaryPassword,
+                true
+        );
     }
 
     public List<Patient> getAllPatients() {
@@ -137,7 +129,6 @@ public class PatientService {
 
         patientRepository.delete(patient);
 
-        // Delete only the login account linked to this patient.
         if (user != null) {
             userRepository.delete(user);
         }
@@ -152,7 +143,8 @@ public class PatientService {
             int index = SECURE_RANDOM.nextInt(
                     PASSWORD_CHARACTERS.length());
 
-            password.append(PASSWORD_CHARACTERS.charAt(index));
+            password.append(
+                    PASSWORD_CHARACTERS.charAt(index));
         }
 
         return password.toString();
