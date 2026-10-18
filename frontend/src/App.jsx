@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Layout from "./components/Layout";
@@ -10,6 +11,7 @@ import Appointments from "./pages/Appointments";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ChangePassword from "./pages/ChangePassword";
 
 import PatientDashboard from "./pages/PatientDashboard";
 import DoctorDashboard from "./pages/DoctorDashboard";
@@ -21,11 +23,21 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public */}
+        {/* Public routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Signed-in area: sidebar layout wraps every page below */}
+        {/* Authenticated user password change */}
+        <Route
+          path="/change-password"
+          element={
+            <RoleProtectedRoute allowedRoles={ALL_ROLES}>
+              <ChangePassword />
+            </RoleProtectedRoute>
+          }
+        />
+
+        {/* Authenticated pages with sidebar */}
         <Route
           element={
             <RoleProtectedRoute allowedRoles={ALL_ROLES}>
@@ -38,15 +50,24 @@ function App() {
           <Route path="/appointments" element={<Appointments />} />
 
           <Route element={<RoleProtectedRoute allowedRoles={["PATIENT"]} />}>
-            <Route path="/patient-dashboard" element={<PatientDashboard />} />
+            <Route
+              path="/patient-dashboard"
+              element={<PatientDashboard />}
+            />
           </Route>
 
           <Route element={<RoleProtectedRoute allowedRoles={["DOCTOR"]} />}>
-            <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
+            <Route
+              path="/doctor-dashboard"
+              element={<DoctorDashboard />}
+            />
           </Route>
 
           <Route element={<RoleProtectedRoute allowedRoles={["ADMIN"]} />}>
-            <Route path="/admin-dashboard" element={<AdminDashboard />} />
+            <Route
+              path="/admin-dashboard"
+              element={<AdminDashboard />}
+            />
             <Route path="/patients" element={<Patients />} />
           </Route>
         </Route>
