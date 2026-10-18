@@ -1,3 +1,4 @@
+
 package com.hospital.management.dto;
 
 public class LoginResponseDTO {
@@ -7,6 +8,7 @@ public class LoginResponseDTO {
     private String email;
     private String role;
     private String token;
+    private boolean mustChangePassword;
 
     public Long getId() {
         return id;
@@ -46,5 +48,13 @@ public class LoginResponseDTO {
 
     public void setToken(String token) {
         this.token = token;
+    }
+
+    public boolean isMustChangePassword() {
+        return mustChangePassword;
+    }
+
+    public void setMustChangePassword(boolean mustChangePassword) {
+        this.mustChangePassword = mustChangePassword;
     }
 }
