@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { apiRequest } from "../utils/api";
 import { getUser } from "../utils/auth";
@@ -17,6 +18,8 @@ function Patients() {
   const [editingPatient, setEditingPatient] = useState(null);
   const [actionError, setActionError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [createdPatient, setCreatedPatient] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   const error = actionError || loadError;
 
@@ -24,14 +27,16 @@ function Patients() {
     setForm({ ...form, [event.target.name]: event.target.value });
   };
 
-  // ADD PATIENT
+  // ADD PATIENT AND DISPLAY TEMPORARY PASSWORD
   const handleSubmit = async (event) => {
     event.preventDefault();
     setActionError("");
+    setCreatedPatient(null);
+    setCopied(false);
     setSaving(true);
 
     try {
-      await apiRequest("/patients", {
+      const result = await apiRequest("/patients", {
         method: "POST",
         body: JSON.stringify({
           name: form.name.trim(),
@@ -41,12 +46,40 @@ function Patients() {
         }),
       });
 
+      if (!result || !result.temporaryPassword) {
+        throw new Error(
+          "Patient may have been created, but the temporary password was not returned. Check the backend response before retrying."
+        );
+      }
+
+      setCreatedPatient({
+        name: result.name || form.name.trim(),
+        email: result.email || form.email.trim(),
+        temporaryPassword: result.temporaryPassword,
+      });
+
       setForm(emptyForm);
       reload();
     } catch (err) {
-      setActionError(err.message);
+      setActionError(err.message || "Unable to add patient.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  // COPY TEMPORARY PASSWORD
+  const handleCopyPassword = async () => {
+    if (!createdPatient?.temporaryPassword) return;
+
+    try {
+      await navigator.clipboard.writeText(
+        createdPatient.temporaryPassword
+      );
+      setCopied(true);
+    } catch {
+      setActionError(
+        "Could not copy the password. Please select and copy it manually."
+      );
     }
   };
 
@@ -69,7 +102,7 @@ function Patients() {
       setEditingPatient(null);
       reload();
     } catch (err) {
-      setActionError(err.message);
+      setActionError(err.message || "Unable to update patient.");
     }
   };
 
@@ -83,7 +116,7 @@ function Patients() {
       await apiRequest(`/patients/${id}`, { method: "DELETE" });
       reload();
     } catch (err) {
-      setActionError(err.message);
+      setActionError(err.message || "Unable to delete patient.");
     }
   };
 
@@ -91,11 +124,64 @@ function Patients() {
     <>
       <PageHeader
         title="Patients"
-        subtitle={`${patients.length} registered patient${patients.length === 1 ? "" : "s"}`}
+        subtitle={`${patients.length} registered patient${
+          patients.length === 1 ? "" : "s"
+        }`}
       />
 
       <Alert>{error}</Alert>
 
+      {/* SHOW TEMPORARY PASSWORD AFTER SUCCESSFUL CREATION */}
+      {createdPatient && (
+        <section className="card section">
+          <div className="card-head">
+            <h2>Patient created successfully!</h2>
+          </div>
+
+          <div className="card-body">
+            <p>
+              <strong>Name:</strong> {createdPatient.name}
+            </p>
+
+            <p>
+              <strong>Email:</strong> {createdPatient.email}
+            </p>
+
+            <p>
+              <strong>Temporary password:</strong>
+            </p>
+
+            <div className="form-actions">
+              <code
+                style={{
+                  padding: "10px",
+                  display: "block",
+                  overflowWrap: "anywhere",
+                  userSelect: "all",
+                }}
+              >
+                {createdPatient.temporaryPassword}
+              </code>
+
+              <button
+                type="button"
+                className="btn"
+                onClick={handleCopyPassword}
+              >
+                {copied ? "Copied!" : "Copy password"}
+              </button>
+            </div>
+
+            <p>
+              Save this password securely and share it with the patient.
+              For security, it will disappear when you leave this page
+              or refresh it.
+            </p>
+          </div>
+        </section>
+      )}
+
+      {/* ADD PATIENT */}
       {isAdmin && (
         <section className="card section">
           <div className="card-head">
@@ -160,6 +246,7 @@ function Patients() {
         </section>
       )}
 
+      {/* PATIENT LIST */}
       <section className="card">
         {patients.length === 0 ? (
           <Empty title="No patients found" />
@@ -253,6 +340,7 @@ function Patients() {
                             <button type="submit" className="btn btn-sm">
                               Save changes
                             </button>
+
                             <button
                               type="button"
                               className="btn btn-sm btn-secondary"
@@ -270,16 +358,23 @@ function Patients() {
                       <td>{patient.email}</td>
                       <td>{patient.phone}</td>
                       <td className="num">{patient.age}</td>
+
                       {isAdmin && (
                         <td className="col-actions">
-                          <div className="btn-row" style={{ justifyContent: "flex-end" }}>
+                          <div
+                            className="btn-row"
+                            style={{ justifyContent: "flex-end" }}
+                          >
                             <button
                               type="button"
                               className="btn btn-sm btn-secondary"
-                              onClick={() => setEditingPatient({ ...patient })}
+                              onClick={() =>
+                                setEditingPatient({ ...patient })
+                              }
                             >
                               Edit
                             </button>
+
                             <button
                               type="button"
                               className="btn btn-sm btn-danger"
