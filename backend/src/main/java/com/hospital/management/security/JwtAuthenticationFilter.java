@@ -1,4 +1,3 @@
-```java
 package com.hospital.management.security;
 
 import com.hospital.management.model.User;
@@ -151,4 +150,3 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         response.sendError(status, message);
     }
 }
-```
