@@ -1,3 +1,4 @@
+```java
 package com.hospital.management.security;
 
 import com.hospital.management.model.User;
@@ -15,11 +16,11 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -62,34 +63,68 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             String email = claims.getSubject();
 
-            // Always trust the role stored in the database, not the token
-            Optional<User> user = userRepository.findByEmail(email);
+            Optional<User> optionalUser = userRepository.findByEmail(email);
 
-            if (user.isPresent() && user.get().getRole() != null) {
+            if (optionalUser.isEmpty()) {
+                SecurityContextHolder.clearContext();
+                response.sendError(
+                        HttpServletResponse.SC_UNAUTHORIZED,
+                        "User not found"
+                );
+                return;
+            }
 
-                String role = user.get().getRole();
+            User user = optionalUser.get();
 
-                if (role.startsWith("ROLE_")) {
-                    role = role.substring(5);
-                }
+            if (user.getRole() == null) {
+                SecurityContextHolder.clearContext();
+                response.sendError(
+                        HttpServletResponse.SC_UNAUTHORIZED,
+                        "User role not found"
+                );
+                return;
+            }
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                email,
-                                null,
-                                Collections.singletonList(
-                                        new SimpleGrantedAuthority("ROLE_" + role)
-                                )
-                        );
+            String role = user.getRole();
 
-                SecurityContextHolder.getContext()
-                        .setAuthentication(authentication);
+            if (role.startsWith("ROLE_")) {
+                role = role.substring(5);
+            }
+
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            email,
+                            null,
+                            Collections.singletonList(
+                                    new SimpleGrantedAuthority("ROLE_" + role)
+                            )
+                    );
+
+            SecurityContextHolder.getContext()
+                    .setAuthentication(authentication);
+
+            String requestPath = request.getServletPath();
+            boolean isChangePasswordEndpoint =
+                    "/auth/change-password".equals(requestPath);
+
+            if (user.isMustChangePassword()
+                    && !isChangePasswordEndpoint) {
+
+                SecurityContextHolder.clearContext();
+
+                response.sendError(
+                        HttpServletResponse.SC_FORBIDDEN,
+                        "You must change your temporary password first"
+                );
+                return;
             }
 
         } catch (Exception exception) {
+            SecurityContextHolder.clearContext();
             log.debug("Invalid JWT token: {}", exception.getMessage());
         }
 
         filterChain.doFilter(request, response);
     }
 }
+```
