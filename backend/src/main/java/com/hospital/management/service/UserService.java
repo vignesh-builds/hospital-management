@@ -43,7 +43,6 @@ public class UserService {
                 || isBlank(request.getPhone())
                 || isBlank(request.getPassword())
                 || request.getAge() == null) {
-
             throw new BadRequestException(
                     "Name, email, phone, age and password are required");
         }
@@ -82,6 +81,7 @@ public class UserService {
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
         user.setRole("PATIENT");
+        user.setMustChangePassword(false);
 
         User savedUser = userRepository.save(user);
 
@@ -103,7 +103,6 @@ public class UserService {
         if (loginRequest == null
                 || isBlank(loginRequest.getEmail())
                 || isBlank(loginRequest.getPassword())) {
-
             throw new BadRequestException("Invalid email or password");
         }
 
@@ -114,7 +113,6 @@ public class UserService {
 
         if (!passwordEncoder.matches(
                 loginRequest.getPassword(), user.getPassword())) {
-
             throw new BadRequestException("Invalid email or password");
         }
 
@@ -127,8 +125,56 @@ public class UserService {
         response.setEmail(user.getEmail());
         response.setRole(user.getRole());
         response.setToken(token);
+        response.setMustChangePassword(user.isMustChangePassword());
 
         return response;
+    }
+
+    // CHANGE PASSWORD
+    @Transactional
+    public void changePassword(
+            String email,
+            String oldPassword,
+            String newPassword,
+            String confirmPassword) {
+
+        if (isBlank(email)
+                || isBlank(oldPassword)
+                || isBlank(newPassword)
+                || isBlank(confirmPassword)) {
+            throw new BadRequestException(
+                    "All password fields are required");
+        }
+
+        if (!newPassword.equals(confirmPassword)) {
+            throw new BadRequestException(
+                    "New password and confirm password do not match");
+        }
+
+        if (newPassword.length() < 6) {
+            throw new BadRequestException(
+                    "New password must be at least 6 characters");
+        }
+
+        if (oldPassword.equals(newPassword)) {
+            throw new BadRequestException(
+                    "New password must be different from old password");
+        }
+
+        User user = userRepository
+                .findByEmailIgnoreCase(email.trim())
+                .orElseThrow(() ->
+                        new BadRequestException("User account not found"));
+
+        if (!passwordEncoder.matches(
+                oldPassword, user.getPassword())) {
+            throw new BadRequestException("Old password is incorrect");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setMustChangePassword(false);
+
+        userRepository.save(user);
     }
 
     private boolean isBlank(String value) {
