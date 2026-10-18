@@ -1,3 +1,4 @@
+
 package com.hospital.management.service;
 
 import com.hospital.management.dto.LoginRequestDTO;
@@ -17,7 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class UserService {
 
-    private static final String EMAIL_PATTERN = "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$";
+    private static final String EMAIL_PATTERN =
+            "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$";
 
     @Autowired
     private UserRepository userRepository;
@@ -31,29 +33,42 @@ public class UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-
-    // =========================
-    // REGISTER USER (always PATIENT)
-    // =========================
+    // REGISTER PATIENT
     @Transactional
     public User registerUser(RegisterRequestDTO request) {
 
         if (request == null
                 || isBlank(request.getName())
                 || isBlank(request.getEmail())
-                || isBlank(request.getPassword())) {
+                || isBlank(request.getPhone())
+                || isBlank(request.getPassword())
+                || request.getAge() == null) {
 
             throw new BadRequestException(
-                    "Name, email and password are required");
+                    "Name, email, phone, age and password are required");
         }
 
+        String name = request.getName().trim();
         String email = request.getEmail().trim().toLowerCase();
+        String phone = request.getPhone().trim();
+        String password = request.getPassword();
+        Integer age = request.getAge();
 
         if (!email.matches(EMAIL_PATTERN)) {
             throw new BadRequestException("Please enter a valid email");
         }
 
-        if (request.getPassword().length() < 6) {
+        if (!phone.matches("\\d{10}")) {
+            throw new BadRequestException(
+                    "Phone number must contain exactly 10 digits");
+        }
+
+        if (age < 0 || age > 150) {
+            throw new BadRequestException(
+                    "Age must be between 0 and 150");
+        }
+
+        if (password.length() < 6) {
             throw new BadRequestException(
                     "Password must be at least 6 characters");
         }
@@ -63,26 +78,26 @@ public class UserService {
         }
 
         User user = new User();
-        user.setName(request.getName().trim());
+        user.setName(name);
         user.setEmail(email);
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setPassword(passwordEncoder.encode(password));
         user.setRole("PATIENT");
 
         User savedUser = userRepository.save(user);
 
         Patient patient = new Patient();
-        patient.setName(savedUser.getName());
-        patient.setEmail(savedUser.getEmail());
+        patient.setName(name);
+        patient.setEmail(email);
+        patient.setPhone(phone);
+        patient.setAge(age);
         patient.setUser(savedUser);
+
         patientRepository.save(patient);
 
         return savedUser;
     }
 
-
-    // =========================
     // LOGIN USER
-    // =========================
     public LoginResponseDTO loginUser(LoginRequestDTO loginRequest) {
 
         if (loginRequest == null
