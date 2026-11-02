@@ -1,0 +1,113 @@
+/* =========================
+   DOCTORS PAGE
+========================= */
+
+.doctors-page {
+  padding: 30px;
+}
+
+.doctors-page h1 {
+  margin-bottom: 25px;
+}
+
+
+/* Add Doctor Form */
+
+.doctors-page form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+}
+
+.doctors-page input {
+  padding: 11px;
+  width: 180px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.doctors-page form button {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 6px;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+}
+
+.doctors-page form button:hover {
+  opacity: 0.85;
+}
+
+
+/* Doctor Card */
+
+.doctor-card {
+  background-color: white;
+
+  padding: 25px;
+
+  margin-bottom: 20px;
+
+  border-radius: 10px;
+
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.doctor-card h2 {
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+.doctor-card p {
+  margin: 8px 0;
+}
+
+
+/* Edit Button */
+
+.doctor-card > button:first-of-type {
+  background-color: #ffc107;
+  color: black;
+}
+
+
+/* Delete Button */
+
+.doctor-card > button:last-of-type {
+  background-color: #dc3545;
+  color: white;
+}
+
+
+/* Buttons */
+
+.doctor-card button {
+  padding: 8px 14px;
+
+  margin: 5px;
+
+  border: none;
+
+  border-radius: 6px;
+
+  cursor: pointer;
+}
+
+.doctor-card button:hover {
+  opacity: 0.8;
+}
+
+
+/* Edit Form */
+
+.doctor-card form {
+  margin-top: 15px;
+}
+
+.doctor-card form button {
+  background-color: #28a745;
+  color: white;
+}

@@ -1,0 +1,203 @@
+/* Shared styles for prescriptions, invoices, medical history, beds */
+
+textarea.input {
+  min-height: 84px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.badge-pending,
+.badge-admitted {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+.badge-paid,
+.badge-discharged {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.link-inline {
+  font-weight: 500;
+}
+
+/* ---------- printable sheet (prescription / invoice) ---------- */
+.sheet {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 32px 36px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+.sheet-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 14px;
+  border-bottom: 2px solid var(--brand);
+  margin-bottom: 18px;
+}
+.sheet-head h2 {
+  margin: 0;
+  color: var(--brand);
+}
+.sheet-head .muted,
+.muted {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+.sheet-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px 24px;
+  margin-bottom: 18px;
+}
+.sheet-meta dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+.sheet-meta dd {
+  margin: 2px 0 0;
+  font-weight: 500;
+}
+.sheet h3 {
+  margin: 18px 0 6px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+.sheet .rx {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--brand);
+  margin: 18px 0 4px;
+}
+.pre-wrap {
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+.sheet-sign {
+  margin-top: 48px;
+  display: flex;
+  justify-content: flex-end;
+}
+.sheet-sign div {
+  border-top: 1px solid var(--ink-soft);
+  padding-top: 6px;
+  min-width: 200px;
+  text-align: center;
+  font-size: 0.85rem;
+}
+.sheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+.sheet-table th,
+.sheet-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.sheet-table td.num,
+.sheet-table th.num {
+  text-align: right;
+}
+.sheet-table tfoot td {
+  font-weight: 700;
+  border-top: 2px solid var(--ink);
+  border-bottom: none;
+}
+
+/* ---------- beds ---------- */
+.bed-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.bed-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--ok);
+  background: var(--ok-bg);
+}
+.bed-card.is-occupied {
+  border-color: var(--danger);
+  background: var(--danger-bg);
+}
+.bed-card h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.bed-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.bed-line {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+.bed-admit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ---------- history ---------- */
+.history-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  padding: 16px;
+}
+.rx-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  background: var(--surface);
+}
+.rx-card h4 {
+  margin: 0 0 4px;
+}
+
+/* ---------- printing ---------- */
+@media print {
+  .sidebar,
+  .mobilebar,
+  .scrim,
+  .no-print,
+  .page-actions {
+    display: none !important;
+  }
+  .shell {
+    display: block !important;
+  }
+  .main,
+  .container {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  .sheet,
+  .card {
+    box-shadow: none !important;
+    border: none !important;
+  }
+}

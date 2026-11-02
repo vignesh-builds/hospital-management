@@ -1,0 +1,125 @@
+/* =========================
+   PATIENTS PAGE
+========================= */
+
+.patients-page {
+  padding: 30px;
+}
+
+.patients-page h1 {
+  margin-bottom: 25px;
+}
+
+
+/* Add Patient Form */
+
+.patients-page form {
+  display: flex;
+
+  gap: 10px;
+
+  flex-wrap: wrap;
+
+  margin-bottom: 30px;
+}
+
+.patients-page input {
+  padding: 11px;
+
+  width: 180px;
+
+  border: 1px solid #ccc;
+
+  border-radius: 6px;
+
+  font-size: 14px;
+}
+
+.patients-page form button {
+  padding: 10px 18px;
+
+  border: none;
+
+  border-radius: 6px;
+
+  background-color: #007bff;
+
+  color: white;
+
+  cursor: pointer;
+}
+
+.patients-page form button:hover {
+  opacity: 0.85;
+}
+
+
+/* Patient Card */
+
+.patient-card {
+  background-color: white;
+
+  padding: 25px;
+
+  margin-bottom: 20px;
+
+  border-radius: 10px;
+
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.patient-card h2 {
+  margin-top: 0;
+
+  margin-bottom: 15px;
+}
+
+.patient-card p {
+  margin: 8px 0;
+}
+
+
+/* Buttons */
+
+.patient-card button {
+  padding: 8px 14px;
+
+  margin: 5px;
+
+  border: none;
+
+  border-radius: 6px;
+
+  cursor: pointer;
+}
+
+.patient-card button:hover {
+  opacity: 0.8;
+}
+
+
+/* Edit Button */
+
+.patient-card > button:first-of-type {
+  background-color: #ffc107;
+
+  color: black;
+}
+
+
+/* Delete Button */
+
+.patient-card > button:last-of-type {
+  background-color: #dc3545;
+
+  color: white;
+}
+
+
+/* Update Button */
+
+.patient-card form button {
+  background-color: #28a745;
+
+  color: white;
+}
