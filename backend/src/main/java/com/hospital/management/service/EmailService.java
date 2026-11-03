@@ -16,39 +16,47 @@ public class EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
 
-    @Value("${resend.api.key:}")
-    private String resendApiKey;
+    @Value("${brevo.api.key:}")
+    private String brevoApiKey;
 
-    @Value("${resend.from.email:onboarding@resend.dev}")
-    private String fromEmail;
+    @Value("${brevo.sender.email:vignesh.builds@gmail.com}")
+    private String senderEmail;
+
+    @Value("${brevo.sender.name:CarePoint Hospital}")
+    private String senderName;
 
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
     public void sendEmail(String toEmail, String subject, String body) {
-        log.info("Sending email to [{}] with subject [{}] via Resend API", toEmail, subject);
+        log.info("Sending email to [{}] with subject [{}] via Brevo API", toEmail, subject);
 
-        if (resendApiKey == null || resendApiKey.isBlank()) {
-            log.warn("RESEND_API_KEY is not configured. Email dispatch skipped. Message body:\n{}", body);
+        if (brevoApiKey == null || brevoApiKey.isBlank()) {
+            log.warn("BREVO_API_KEY is not configured. Email dispatch skipped. Message body:\n{}", body);
             return;
         }
 
         try {
             String escapedSubject = escapeJson(subject);
             String escapedHtml = escapeJson(body.replace("\r\n", "<br/>").replace("\n", "<br/>"));
+            String escapedSenderName = escapeJson(senderName);
 
             String payload = String.format(
-                "{\"from\":\"CarePoint Hospital <%s>\",\"to\":[\"%s\"],\"subject\":\"%s\",\"html\":\"<div style=\\\"font-family:sans-serif;line-height:1.6;\\\">%s</div>\"}",
-                fromEmail,
+                "{\"sender\":{\"name\":\"%s\",\"email\":\"%s\"}," +
+                "\"to\":[{\"email\":\"%s\"}]," +
+                "\"subject\":\"%s\"," +
+                "\"htmlContent\":\"<div style=\\\"font-family:sans-serif;line-height:1.6;\\\">%s</div>\"}",
+                escapedSenderName,
+                senderEmail,
                 toEmail,
                 escapedSubject,
                 escapedHtml
             );
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api.resend.com/emails"))
-                    .header("Authorization", "Bearer " + resendApiKey.trim())
+                    .uri(URI.create("https://api.brevo.com/v3/smtp/email"))
+                    .header("api-key", brevoApiKey.trim())
                     .header("Content-Type", "application/json")
                     .timeout(Duration.ofSeconds(15))
                     .POST(HttpRequest.BodyPublishers.ofString(payload))
@@ -57,7 +65,7 @@ public class EmailService {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                log.info("Email sent successfully to [{}]. Resend response: {}", toEmail, response.body());
+                log.info("Email sent successfully to [{}]. Brevo response: {}", toEmail, response.body());
             } else {
                 log.warn("Failed to dispatch email to [{}]: HTTP {} Response: {}. Message body:\n{}",
                         toEmail, response.statusCode(), response.body(), body);
