@@ -2,44 +2,78 @@ package com.hospital.management.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 
 @Service
 public class EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
 
-    @Autowired(required = false)
-    private JavaMailSender mailSender;
+    @Value("${BREVO_API_KEY:${brevo.api.key:}}")
+    private String brevoApiKey;
 
-    @Value("${spring.mail.username:vignesh.builds@gmail.com}")
+    @Value("${BREVO_SENDER_EMAIL:${brevo.sender.email:vignesh.builds@gmail.com}}")
     private String senderEmail;
+
+    @Value("${BREVO_SENDER_NAME:CarePoint Hospital}")
+    private String senderName;
+
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
 
     @Async
     public void sendEmail(String toEmail, String subject, String body) {
-        log.info("Sending email to [{}] with subject [{}] via Gmail SMTP", toEmail, subject);
+        log.info("Sending email to [{}] with subject [{}] via Brevo HTTP API", toEmail, subject);
 
-        if (mailSender == null) {
-            log.warn("JavaMailSender is not configured. Email dispatch skipped. Message body:\n{}", body);
+        if (brevoApiKey == null || brevoApiKey.isBlank()) {
+            log.warn("BREVO_API_KEY is missing. Email dispatch skipped. Message:\n{}", body);
             return;
         }
 
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(senderEmail);
-            message.setTo(toEmail);
-            message.setSubject(subject);
-            message.setText(body);
+            String escapedSubject = escapeJson(subject);
+            String escapedHtml = escapeJson(body.replace("\r\n", "<br/>").replace("\n", "<br/>"));
+            String escapedSenderName = escapeJson(senderName);
 
-            mailSender.send(message);
-            log.info("Email sent successfully to [{}]", toEmail);
+            String payload = String.format(
+                "{\"sender\":{\"name\":\"%s\",\"email\":\"%s\"}," +
+                "\"to\":[{\"email\":\"%s\"}]," +
+                "\"subject\":\"%s\"," +
+                "\"htmlContent\":\"<div style=\\\"font-family:sans-serif;line-height:1.6;\\\">%s</div>\"}",
+                escapedSenderName,
+                senderEmail,
+                toEmail,
+                escapedSubject,
+                escapedHtml
+            );
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.brevo.com/v3/smtp/email"))
+                    .header("api-key", brevoApiKey.trim())
+                    .header("Content-Type", "application/json")
+                    .timeout(Duration.ofSeconds(15))
+                    .POST(HttpRequest.BodyPublishers.ofString(payload))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                log.info("Email sent successfully to [{}]. Brevo response: {}", toEmail, response.body());
+            } else {
+                log.error("Failed to dispatch email to [{}]: HTTP {} Response: {}",
+                        toEmail, response.statusCode(), response.body());
+            }
         } catch (Exception ex) {
-            log.error("Failed to send email to [{}]: {}", toEmail, ex.getMessage(), ex);
+            log.error("Failed to dispatch email to [{}]: {}", toEmail, ex.getMessage(), ex);
         }
     }
 
@@ -68,5 +102,16 @@ public class EmailService {
             name, otp
         );
         sendEmail(toEmail, subject, body);
+    }
+
+    private String escapeJson(String text) {
+        if (text == null) return "";
+        return text.replace("\\", "\\\\")
+                   .replace("\"", "\\\"")
+                   .replace("\b", "\\b")
+                   .replace("\f", "\\f")
+                   .replace("\n", "\\n")
+                   .replace("\r", "\\r")
+                   .replace("\t", "\\t");
     }
 }
